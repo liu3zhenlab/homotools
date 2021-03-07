@@ -2,8 +2,9 @@
 
 args <- commandArgs(trailingOnly=T)
 nucmer_show <- args[1] # nucmer show-coordi output
-outdir <- args[2] # PDF output directory
-outpdf <- args[3] # PDF output file
+band_color <- args[2] # color to be used for plotting
+outdir <- args[3] # PDF output directory
+outpdf <- args[4] # PDF output file
 
 ###########################################################
 #' module to determine xaxis
@@ -48,14 +49,21 @@ bandconnect <- function(topregion, bottomregion, topheight, bottomheight,
     midp <- (startp + endp) / 2 
     beizer_value <- sqrt(1:npoint) / sqrt(npoint)  # sqrt as default
     
-    curve.x1 <- seq(startp[1], midp[1], by = (midp[1] - startp[1])/(npoint-1))
-    curve.y1 <- startp[2] - beizer_value * (startp[2] - midp[2])
+    if (startp[1] == endp[1]) {
+      curve.x <- rep(startp[1], 2*npoint)
+    } else {
+      curve.x1 <- seq(startp[1], midp[1], by = (midp[1] - startp[1])/(npoint-1))
+      curve.x2 <- seq(midp[1], endp[1], by = (endp[1] - midp[1])/(npoint-1))
+      curve.x <- c(curve.x1, curve.x2)
+    }
     
-    curve.x2 <- seq(midp[1], endp[1], by = (endp[1] - midp[1])/(npoint-1))
-    curve.y2 <- rev(endp[2] - beizer_value * (endp[2] - midp[2]))
-    
-    curve.x <- c(curve.x1, curve.x2)
-    curve.y <- c(curve.y1, curve.y2)
+    if (startp[2] == endp[2]) {
+      curve.y <- rep(startp[2], 2*npoint)
+    } else {
+      curve.y1 <- startp[2] - beizer_value * (startp[2] - midp[2])
+      curve.y2 <- rev(endp[2] - beizer_value * (endp[2] - midp[2]))
+      curve.y <- c(curve.y1, curve.y2)
+    }
     list(x=curve.x, y=curve.y)
   }
   
@@ -63,15 +71,31 @@ bandconnect <- function(topregion, bottomregion, topheight, bottomheight,
   p2 <- transform_curve(c(topregion[2], topheight), c(bottomregion[2], bottomheight))
   px <- c(p1$x, rev(p2$x))
   py <- c(p1$y, rev(p2$y))
-  lines(px, py) 
+  #lines(px, py)
   polygon(px, py, border=border, col=bandcol)
 }
 
+###########################################################
+#' check if a color is valid
+#' https://stackoverflow.com/questions/13289009/check-if-character-string-is-a-valid-color-representation
+###########################################################
+isColor <- function(col) {
+  sapply(col, function(incol) {
+    tryCatch(is.matrix(col2rgb(incol)), 
+             error = function(e) FALSE)
+  })
+}
 
 ###########################################################
 # nucmerplot
 ###########################################################
-nucmerplot <- function(datafile, outpath=".", imageoutfile) {
+nucmerplot <- function(datafile, band_col="deepskyblue4", outpath=".", imageoutfile) {
+  
+  # check if the color is valid
+  if (!isColor(band_col)) {
+    cat(band_col, "is not valid. Plot using the default\n")
+    band_col="deepskyblue4"
+  }
   
   # data of alignments, qry, and subj
   aln <- read.delim(datafile, stringsAsFactor=F)
@@ -92,9 +116,9 @@ nucmerplot <- function(datafile, outpath=".", imageoutfile) {
 	xrange <- c(-max.xsize / 50, max.xsize + max.xsize / 50)
 	
 	# connection colors
-	high.ld.col <- "deepskyblue4"
-	low.ld.col <- "grey96"
-	colfunc <- colorRampPalette(c(low.ld.col, high.ld.col))
+	high_identity_col <- band_col
+	low_identity_col <- "grey96"
+	colfunc <- colorRampPalette(c(low_identity_col, high_identity_col))
 	color_num <- 20
 	allcols <- colfunc(color_num)
 	
@@ -130,10 +154,10 @@ nucmerplot <- function(datafile, outpath=".", imageoutfile) {
   
   # connections
   for (i in 1:nrow(aln)) {
-    band_col <- allcols[which.min(abs(identity20 - aln[i, "identity"]))]
+    band_gradient_col <- allcols[which.min(abs(identity20 - aln[i, "identity"]))]
     bandconnect(topregion=aln[i, 1:2], topheight=0.835,
                 bottomregion=aln[i, 3:4], bottomheight=0.17,
-                border=NA, bandcol=band_col)
+                border=NA, bandcol=band_gradient_col)
   }
   
   # text labels
@@ -165,4 +189,4 @@ nucmerplot <- function(datafile, outpath=".", imageoutfile) {
 }
 
 # execute plotting
-nucmerplot(datafile=nucmer_show, outpath=outdir, imageoutfile=outpdf)
+nucmerplot(datafile=nucmer_show, band_col=band_color, outpath=outdir, imageoutfile=outpdf)
