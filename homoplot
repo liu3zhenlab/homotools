@@ -1,11 +1,11 @@
 #!/usr/bin/perl -w
-#
 #======================================================================
-# homoplot.pl
+# homoplot
+#
 # Author: Sanzhen Liu <liu3zhen@ksu.edu>
 # 3/2/2021
 #
-# The script is to find the alignment region of a sequence and plot matches
+# The Perl script to find the match region and plot alignments
 #======================================================================
 
 use strict;
@@ -15,7 +15,7 @@ use File::Temp;
 use FindBin;
 use Term::ANSIColor qw(:constants);
 #use lib "$FindBin::Bin/lib";
-#use kad;
+#use xxx;
 
 my $version = "0.1.0";
 
@@ -63,9 +63,6 @@ EOF
 exit;
 }
 
-# to add
-#--skipblast      blastn will be skipped if specified
-
 ###############################################
 # parameters:
 ###############################################
@@ -81,7 +78,7 @@ my ($query, $db);
 					"version", "help");
 
 if (exists $opts{version}) {
-	print "$0 $version\n";
+	print "$version\n";
 	exit;
 }
 
@@ -183,21 +180,19 @@ my $target_fas = $prefix."/".$prefix.".4.target.fas";
 # nucmer output
 my $delta_out = $prefix."/".$prefix.".5a.delta";
 my $nucmer_show = $prefix."/".$prefix.".5b.delta.txt";
+my $nucmer_filt_show = $prefix."/".$prefix.".5c.filt.delta.txt";
 
 # PDF plotting
 my $alnplot_pdf = $prefix.".o1.aln.pdf";
-
-###############################################
-# variables
-###############################################
-
-my ($target_start, $target_end);
-my ($query_name,$query_length, $subj_length);
+my $filt_alnplot_pdf = $prefix.".o2.aln.filt.pdf";
 
 ###############################################
 # blastn
 ###############################################
 my $blastn_fmt = "6 qseqid qlen sseqid slen length pident qcovs qstart qend sstart send evalue bitscore";
+
+my ($target_start, $target_end);
+my ($query_name,$query_length, $subj_length);
 
 if (!exists $opts{noblastn}) {
 	`blastn -db $db -query $query -evalue $evalue -num_threads $threads -outfmt "$blastn_fmt" > $blastn_out`;
@@ -230,17 +225,6 @@ if (!exists $opts{noblastn}) {
 		&runreport("step 03: Alignments filtered");
 		print STDERR "  - hits: $blastn_filt_nrow\n";
 	}
-} else {
-	$query_name = `grep "^>" $query | sed 's/^>//g' | sed 's/ .*//g'`;
-	chomp $query_name;
-	# check if chr, start, end have been specified
-	if (!exists $opts{tchr} or !exists $opts{tstart} or !exists $opts{tend}) {
-		print STDERR RED, "Because --noblastn was specified, these parameters must be provided:\n", RESET;
-		print STDERR RED, "  --tchr --tstart --tend\n", RESET;
-		print STDERR RED, "Exit\n", RESET;
-		exit;
-	}
-}
 
 ###############################################
 # determine the hit range
@@ -250,10 +234,9 @@ if (!exists $opts{noblastn}) {
 # scan $expand x query_lengh and find the start and end
 # extend start with $left_ext and extend end with $right_ext
 #"qseqid qlen sseqid slen length(5) pident qcovs qstart qend sstart (10) send evalue bitscore"
-my $highest_bitscore = 0;
-my ($hit_start, $hit_end);
+	my $highest_bitscore = 0;
+	my ($hit_start, $hit_end);
 
-if (!exists $opts{noblastn}) {
 	my ($best_hit_chr, $best_hit_pos);
 	open(IN, "<", $blastn_filt) || die;
 	while(<IN>) {
@@ -301,13 +284,10 @@ if (!exists $opts{noblastn}) {
 	&runreport("step 05: hit range is $best_hit_chr:$hit_start-$hit_end");
 	print STDERR "  - hit searching is within $scan_start:$scan_end\n";
 	$target_chr = $best_hit_chr;
-}
 
 ###############################################
 # determine target range to be extracted
 ###############################################
-
-if (!exists $opts{noblastn}) {
 	my $hit_ext_start = $hit_start - $left_ext;
 	my $hit_ext_end = $hit_end + $right_ext;
 	&runreport("step 06: target range");
@@ -340,6 +320,17 @@ if (!exists $opts{noblastn}) {
 		print STDERR "  - target end is longer than subj length, set to subj length\n";
 	}
 } else {
+	$query_name = `grep "^>" $query | sed 's/^>//g' | sed 's/ .*//g'`;
+	chomp $query_name;
+	
+	# check if chr, start, end have been specified
+	if (!exists $opts{tchr} or !exists $opts{tstart} or !exists $opts{tend}) {
+		print STDERR RED, "Because --noblastn was specified, these parameters must be provided:\n", RESET;
+		print STDERR RED, "  --tchr --tstart --tend\n", RESET;
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	}
+	
 	$target_start = $opts{tstart};
 	$target_end = $opts{tend};
 	&runreport("step 02-06 of blastn and others skipped");
@@ -383,14 +374,21 @@ if (-f $target_fas) {
 `nucmer --maxmatch --delta $delta_out --threads $threads $query $target_fas`;
 `echo -e "qstart\tqend\tsstart\tsend\tqmatch\tsmatch\tidentity\tqlen\tslen\tqry\tsubj" > $nucmer_show`;
 `show-coords -HTl $delta_out >> $nucmer_show`;
+
+# filtered alignments:
+`echo -e "qstart\tqend\tsstart\tsend\tqmatch\tsmatch\tidentity\tqlen\tslen\tqry\tsubj" > $nucmer_filt_show`;
+`show-coords -HTl -I $identity -L $match $delta_out >> $nucmer_filt_show`;
+
 &runreport("step 08: sequences compared");
 
 ###############################################
 # alignment plot
 ###############################################
 my $aln_plot_r = $utilsPath."/nucmerplot.R";
+
 `Rscript $aln_plot_r $nucmer_show $bandcol $prefix $alnplot_pdf`;
-&runreport("step 09: alignment plotted");
+`Rscript $aln_plot_r $nucmer_filt_show $bandcol $prefix $filt_alnplot_pdf`;
+&runreport("step 09: finish running");
 
 ###############################################
 # cleanup

@@ -99,6 +99,8 @@ nucmerplot <- function(datafile, band_col="deepskyblue4", outpath=".", imageoutf
   
   # data of alignments, qry, and subj
   aln <- read.delim(datafile, stringsAsFactor=F)
+  stopifnot(nrow(aln)>=1)
+  
   qlen <- unique(as.numeric(as.character(aln$qlen)))
   slen <- unique(as.numeric(as.character(aln$slen)))
   qry <- unique(aln$qry)
