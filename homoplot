@@ -17,14 +17,14 @@ use Term::ANSIColor qw(:constants);
 #use lib "$FindBin::Bin/lib";
 #use xxx;
 
-my $version = "0.1.0";
+my $version = "0.1.3";
 
 my $strand = "plus";
 my $prefix = "hpout";
 my $threads = 1;
 my $identity = 80;
 my $match = 100;
-my $coverage = 5;
+my $coverage = 0;
 my $evalue = '1e-50';
 my $left_ext = 0;
 my $right_ext = 0;
@@ -183,8 +183,11 @@ my $nucmer_show = $prefix."/".$prefix.".5b.delta.txt";
 my $nucmer_filt_show = $prefix."/".$prefix.".5c.filt.delta.txt";
 
 # PDF plotting
-my $alnplot_pdf = $prefix.".o1.aln.pdf";
-my $filt_alnplot_pdf = $prefix.".o2.aln.filt.pdf";
+my $alnplot_pdf = $prefix.".o1.alnplot.pdf";
+my $filt_alnplot_pdf = $prefix.".o2.filt.alnplot.pdf";
+
+my $dotplot_pdf = $prefix.".o3.dotplot.pdf";
+my $filt_dotplot_pdf = $prefix.".o4.filt.dotplot.pdf";
 
 ###############################################
 # blastn
@@ -384,10 +387,15 @@ if (-f $target_fas) {
 ###############################################
 # alignment plot
 ###############################################
-my $aln_plot_r = $utilsPath."/nucmerplot.R";
+my $alnplot_r = $utilsPath."/nucmerplot.R";
+my $dotplot_r = $utilsPath."/dotplot.R";
 
-`Rscript $aln_plot_r $nucmer_show $bandcol $prefix $alnplot_pdf`;
-`Rscript $aln_plot_r $nucmer_filt_show $bandcol $prefix $filt_alnplot_pdf`;
+`Rscript $alnplot_r $nucmer_show $bandcol $prefix $alnplot_pdf`;
+`Rscript $alnplot_r $nucmer_filt_show $bandcol $prefix $filt_alnplot_pdf`;
+
+`Rscript $dotplot_r $nucmer_show $bandcol $prefix $dotplot_pdf`;
+`Rscript $dotplot_r $nucmer_filt_show $bandcol $prefix $filt_dotplot_pdf`;
+
 &runreport("step 09: finish running");
 
 ###############################################

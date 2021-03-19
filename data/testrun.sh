@@ -1,3 +1,3 @@
 #!/bin/bash
-../homoplot3 --query query.fas --db db/ref
+../homoplot --query query.fas --db db/ref
 

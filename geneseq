@@ -1,0 +1,72 @@
+#!/usr/bin/perl -w
+# geneseq.pl
+# Author: Sanzhen Liu
+# Date: 3/19/2021
+
+use strict;
+use warnings;
+use Getopt::Long;
+
+my $extension = 0;
+my ($fas, $gtf, $gene, $transcript, $help);
+my $result = &GetOptions("fas|f=s"        => \$fas,
+                         "gtf|i=s"        => \$gtf,
+						 "gene|g=s"       => \$gene,
+						 "ext|e=i"        => \$extension,
+						 "transcript|t=s" => \$transcript,
+						 "help|h"         => \$help
+);
+
+# print help information if errors occur:
+if ($help or !defined $fas or !defined $gtf or !defined $gene) {
+	&errINF;
+	exit;
+}
+
+# open GTF file and read gene information
+open(GTF, "<", $gtf) || die;
+while (<GTF>) {
+	chomp;
+
+}
+close GTF;
+
+
+### count the total sequences:
+my ($seqname, $seq);
+open(FAS, "<", $fas) || die;
+while (<FAS>) {
+	chomp;
+	if (/^>(\S+)/) {
+		my $pass_list = 0;
+		my $pass_feature = 0;
+		if (defined $seqname) {
+			print ">$seqname\n";
+			&format_print($seq, 60);
+		}
+		$seqname = $1;
+		$seq = '';
+	} else {
+		$seq .= $_;
+	}
+}
+close FAS;
+
+### module for formatted output:
+sub format_print {
+	my ($inseq, $formatlen) = @_;
+	while (my $chunk = substr($inseq, 0, $formatlen, "")) {
+		print "$chunk\n";
+	}
+}
+
+sub errINF {
+	print <<EOF;
+Usage: geneseq --fas <fasta> [--feature <str> or --list <file>]
+[Options]
+    --fas|f <file>      : fasta file (required)
+    --help:             : help information
+EOF
+	exit;
+}
+
