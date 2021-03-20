@@ -6,60 +6,255 @@
 use strict;
 use warnings;
 use Getopt::Long;
+use Term::ANSIColor qw(:constants);
 
 my $extension = 0;
+my $prefix = "GS";
 my ($fas, $gtf, $gene, $transcript, $help);
 my $result = &GetOptions("fas|f=s"        => \$fas,
                          "gtf|i=s"        => \$gtf,
 						 "gene|g=s"       => \$gene,
 						 "ext|e=i"        => \$extension,
 						 "transcript|t=s" => \$transcript,
+						 "prefix|p=s"     => \$prefix,
 						 "help|h"         => \$help
 );
 
-# print help information if errors occur:
+### print help information if errors occur:
 if ($help or !defined $fas or !defined $gtf or !defined $gene) {
 	&errINF;
 	exit;
 }
 
+
+###############################################
+## preparation
+################################################
+# create a directory for outputs
+if (-d $prefix) {
+    print STDERR RED, "Warning: the directory $prefix exists.\n", RESET;
+} else {
+	`mkdir $prefix`;
+}
+
+# script path:
+#my $scriptPath = $FindBin::Bin;
+#my $utilsPath = $scriptPath."/utils/";
+
+##############################################
+# intermediate output
+###############################################
+my $ori_gtf_out = $prefix."/".$prefix.".1.".$gene.".original.gtf";
+
+my $gtf_dir = $prefix."/".$prefix.".2.transcript.adjusted.GTF";
+if (!-d $gtf_dir) {
+	`mkdir $gtf_dir`;
+}
+my $adj_gtf_prefix = $gtf_dir."/".$gene;
+
+my $gene_fas_out = $prefix."/".$prefix.".3.".$gene.".fasta";
+
+##############################################
+open(ORIGTF, ">", $ori_gtf_out) || die;
+
+##############################################
+#1	gramene	gene	44289	49837	.	+	.	gene_id "Zm00001d027230"; gene_source "gramene"; gene_biotype "protein_coding";
+#1	gramene	transcript	44289	49837	.	+	.	gene_id "Zm00001d027230"; transcript_id "Zm00001d027230_T001"; gene_source "gramene"; gene_biotype "protein_coding"; transcript_source "gramene"; transcript_biotype "protein_coding";
+#exon
+#CDS
+
+###########################################
 # open GTF file and read gene information
+###########################################
+my ($gene_name, $gene_start, $gene_end, $gene_strand, $gene_info);
+my $chromosome;
+my $gene_found = 0;
+my %transcripts;
 open(GTF, "<", $gtf) || die;
 while (<GTF>) {
-	chomp;
+	if (!/^$/ and !/^#/) { # nonempty lines
+		chomp;
+		my @line = split(/\t/, $_);
+		my @adjust_line = @line;
+		my $info = $line[8];
+		my $feature = $line[2];
+		my $strand = $line[6];
+		if ($feature eq "gene") {
+			if ($info =~ /^gene_id \"(.+?)\";/) {
+				$gene_name = $1;
+				if ($gene_name eq $gene) {
+					$chromosome = $line[0]; # chromosome ID;
+					print ORIGTF "$_\n";
+					if ($strand eq "+") {
+						$gene_strand = "+";
+						$gene_start = $line[3] - $extension > 0 ? $line[3] - $extension : 1;
+						$start = $line[3] - $extension;
+						$adjust_line[3] = $line[3] - $gene_start + 1;
+						$adjust_line[4] = $line[4] - $start + 1;
+						$gene_end = $line[4] + $extension;
+					} elsif ($strand eq "-") {
+						$adjust_line[6] = "+";
+						$gene_start = $line[4] + $extension;
+						$gene_strand = "-";
+						$adjust_line[3] = 1;
+						$adjust_line[4] = $line[4] - $line[3] + 1;
+						$gene_end = $line[3] - $extension > 0; $line[3] - $extension : 1;
+					}
+					$gene_found = 1;
+					$gene_info = join("\t", @adjust_line);
 
+				} elsif ($gene_found) {
+					&runreport("Gene found in GTF; GTF scanning completed");
+					last;
+				}
+			} else {
+				print STDERR "format has problem; gene_id might not be used\n";
+				exit;
+			}
+		}
+		
+		### transcripts
+		my $transcript_name;
+		if ($gene_found) {
+			if ($info =~ /^gene_id \"(.+?)\"; transcript_id \"(.+?)\"/) {
+				if ($1 eq $gene) {
+					$transcript_name = $2;
+					
+					if ($line[2] eq "exon" or $line[2] eq "CDS") {
+						my @exon_CDS_info = @adjust_line;
+						$adjust_line[3] = abs($adjust_line[3] - $gene_start) + 1;
+						$adjust_line[4] = abs($adjust_line[4] - $gene_start) + 1;
+						@exon_CDS_info[3..4] = sort {$a <=> $b} @adjust_line[3..4];
+						$exon_CDS_info[6] = "+";
+						my $exon_CDS_info = join("\t", @exon_CDS_info);
+						$transcripts{$transcript_name}{$line[2]}{$exon_CDS_info[3]} = $exon_CDS_info;
+					}
+
+					print ORIGTF "$_\n";
+				}
+			}
+		}
+	}
 }
 close GTF;
+close ORIGTF;
 
+###########################################
+### output transcripts
+###########################################
+foreach my $transcript (keys %transcripts) {
+	my $adj_gtf_out = $adj_gtf_prefix.".".$transcript.".adjusted.gtf";
+	open(ADJGTF, ">", $adj_gtf_out) || die;
+	print ADJGTF "$gene_info\n";
+	my %transcript_exon_CDS_info = %{$transcripts{$transcript}};
+	
+	# exon
+	if (exists $transcript_exon_CDS_info{exon}) {
+		my %pos_info = %{$transcript_exon_CDS_info{exon}};
+		foreach my $pos (sort {$a <=> $b} keys %pos_info) {
+			print ADJGTF "$pos_info{$pos}\n";
+		}
+	}
 
-### count the total sequences:
-my ($seqname, $seq);
+	# CDS
+	if (exists $transcript_exon_CDS_info{CDS}) {
+		my %pos_info = %{$transcript_exon_CDS_info{CDS}};
+		foreach my $pos (sort {$a <=> $b} keys %pos_info) {
+			print ADJGTF "$pos_info{$pos}\n";
+		}
+	}
+	close ADJGTF;
+}
+
+###########################################
+### chromosome sequence
+###########################################
+my ($seq_name, $seq, $seq_len);
+my $chromosome_found = 0;
+my %seq;
 open(FAS, "<", $fas) || die;
 while (<FAS>) {
 	chomp;
 	if (/^>(\S+)/) {
-		my $pass_list = 0;
-		my $pass_feature = 0;
-		if (defined $seqname) {
-			print ">$seqname\n";
-			&format_print($seq, 60);
+		if (defined $seq_name) {
+			if ($se_qname eq $chromosome) {
+				$seq{$seq_name} = $seq;
+				$chromosome_found = 1;
+				last;
+			}
 		}
-		$seqname = $1;
+		$seq_name = $1;
 		$seq = '';
 	} else {
 		$seq .= $_;
 	}
 }
+# last sequence:
+if ((!$chromosome_found) and ($seq_name eq $chromosome)) {
+	$seq{$seq_name} = $seq;
+	$chromosome_found = 1;
+}
 close FAS;
 
-### module for formatted output:
-sub format_print {
-	my ($inseq, $formatlen) = @_;
-	while (my $chunk = substr($inseq, 0, $formatlen, "")) {
-		print "$chunk\n";
-	}
+$seq_len = length($seq{$chromosome});  # chromosome length
+
+if (($gene_start > $seq_len) or ($gene_end > $seq_len)) {
+	print STDERR RED, "extension beyond the chromosome range\n", RESET;
+	exit;
 }
 
+if ($chromosome_found) {
+	&runreport("chromosome/target sequence found");	
+} else {
+	print STDERR RED, "no chromosome/target sequence found\n", RESET;
+	exit;
+}
+
+###########################################
+# gene sequence
+###########################################
+my $gene_seq;
+if ($gene_end > $gene_start) {
+	# strand +
+	$gene_seq = substr($seq{$chromosome}, $gene_start - 1, $gene_end - $gene_start + 1);
+} else {
+	# strand -
+	$gene_seq = substr($seq{$chromosome}, $gene_end - 1, $gene_start - $gene_end + 1);
+	$gene_seq = &revcom($gene_seq);
+}
+
+open(GENEFAS, ">", $gene_fas_out) || die;
+print GENEFAS ">$gene_name\n";
+# print in a certain length per line
+while (my $chunk = substr($gene_seq, 0, 80, "")) {
+	print GENEFAS "$chunk\n";
+}
+close GENEFAS;
+
+&runreport("Gene sequence produced");
+
+###########################################
+# modules
+###########################################
+### reverse and complementary
+sub revcom {
+	my $inseq = shift @_; 
+	my $revcom = reverse($inseq);
+	$revcom =~ tr/AGCTagct/TCGAtcga/;
+	return $revcom;
+}
+
+### funtion to report running return
+sub runreport {
+	my $injob = shift;
+    my $dateinfo = `date +'o %Y-%m-%d %H:%M:%S'`;
+	print STDERR MAGENTA, "$dateinfo", RESET;
+	print STDERR "  $injob.\n";
+	#print LOG "$dateinfo  ";    
+	#print LOG "  $injob.\n";
+}
+
+### Usage information
 sub errINF {
 	print <<EOF;
 Usage: geneseq --fas <fasta> [--feature <str> or --list <file>]

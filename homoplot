@@ -71,11 +71,11 @@ my ($query, $db);
 
 &GetOptions(\%opts, "query=s", "db=s", "ref=s", "dbacc=s",
                     "strand=s", "tchr=s", "tstart=i", "tend=i",
-					"identity=i", "match=i", "coverage=i",
-					"lext=i", "rext=i", "expand=i",
+                    "identity=i", "match=i", "coverage=i",
+                    "lext=i", "rext=i", "expand=i",
                     "prefix=s", "threads=i", "bandcol=s",
-					"noblastn",
-					"version", "help");
+                    "noblastn",
+                    "version", "help");
 
 if (exists $opts{version}) {
 	print "$version\n";
