@@ -3,8 +3,9 @@
 args <- commandArgs(trailingOnly=T)
 nucmer_show <- args[1] # nucmer show-coordi output
 band_color <- args[2] # color to be used for plotting
-outdir <- args[3] # PDF output directory
-outpdf <- args[4] # PDF output file
+query_highlight_bed <- args[3] # bed file for region highlight
+outdir <- args[4] # PDF output directory
+outpdf <- args[5] # PDF output file
 
 ###########################################################
 #' module to determine xaxis
@@ -108,80 +109,119 @@ nucmerplot <- function(datafile, band_col="deepskyblue4", outpath=".", imageoutf
 
   ### plot
   outpdffile <- paste0(outpath, "/", imageoutfile)
-  pdf(outpdffile, width=5, height=3)
+  pdf(outpdffile, width=4, height=2.5)
   
-  # plot
+  # plot setting
   par(mar=c(2.2, 0.5, 1, 0.5), mgp=c(1.5,0.1,0))
   
   # x-range
   max.xsize <- max(qlen, slen)
-	xrange <- c(-max.xsize / 50, max.xsize + max.xsize / 50)
-	
-	# connection colors
-	high_identity_col <- band_col
-	low_identity_col <- "grey96"
-	colfunc <- colorRampPalette(c(low_identity_col, high_identity_col))
-	color_num <- 20
-	allcols <- colfunc(color_num)
-	
-  # identity
-	identity_high <- max(aln$identity)
-	identity_low <- min(aln$identity)
-	if (identity_high == identity_low |
-	    (identity_high - identity_low < 5)) {
-	  identity_low <- identity_high - 5
-	}
-	
-	identity20 <- seq(identity_low, identity_high, by=(identity_high - identity_low)/(color_num -1))
-	
-	# y-range
-	yrange <- c(0, 1)
+  xrange <- c(-max.xsize / 50, max.xsize + max.xsize / 50)
 
-	# plot canvas
+  # connection colors
+  high_identity_col <- band_col
+  low_identity_col <- "grey96"
+  colfunc <- colorRampPalette(c(low_identity_col, high_identity_col))
+  color_num <- 20
+  allcols <- colfunc(color_num)
+
+  # identity
+  identity_high <- max(aln$identity)
+  identity_low <- min(aln$identity)
+  if (identity_high == identity_low |
+      (identity_high - identity_low < 5)) {
+    identity_low <- identity_high - 5
+  }
+
+  identity20 <- seq(identity_low, identity_high, by=(identity_high - identity_low)/(color_num -1))
+
+  # y-range
+  yrange <- c(0, 1)
+
+  # plot canvas
   plot(NULL, NULL, type="n", xlim=xrange, ylim=yrange,
        xlab="", ylab="", bty="n", xaxt="n", yaxt="n")
   
   # x-axis
   xaxis <- smartaxis(max.xsize)
   axis(1, at=xaxis[[1]], labels=xaxis[[2]], tick=F, col="gray50", cex.axis=0.8)
-  mtext(paste("position (", xaxis[[3]], ")"), side=1, line=1)
+  mtext(paste0("position (", xaxis[[3]], ")"), side=1, line=1)
   
   # vertical lines
   abline(v=xaxis[[1]], col="gray70", lwd=0.8)
   abline(v=xaxis[[4]], col="gray90", lwd=0.5)
   
   # region lines
-  rect(0, 0.845, qlen, 0.865, col="gray70", border="gray50") # 0.85
-  rect(0, 0.14, slen, 0.16, col="gray70", border="gray50") # 0.15
+  upper_ycenter <- 0.7
+  upper_adj <- 0.005
+  lower_ycenter <- 0.1
+  lower_adj <- 0.005
+  rect(0, upper_ycenter - upper_adj, qlen, upper_ycenter + upper_adj,
+       col="gray70", border="gray70")
+  rect(0, lower_ycenter - lower_adj, slen, lower_ycenter + lower_adj,
+       col="gray70", border="gray70")
+  
+  # query highlights
+  highlight_names <- NULL
+  if (query_highlight_bed != "empty") { # highlight regions on query
+    #chr start end label height strand color
+	#10	1000	2488	gene	gray60	+	0.015
+	qry_highlight <- read.delim(query_highlight_bed, comment.char="#", header=F)
+	if (nrow(qry_highlight)>0) {
+	  upper_adj <- max(qry_highlight[, 5]) / 2
+	  highlight_names <- qry_highlight[!duplicated(qry_highlight[, 4]), 4]
+	  highlight_colors <- qry_highlight[!duplicated(qry_highlight[, 4]), 7]
+      for (i in 1:nrow(qry_highlight)) {
+	    color <- qry_highlight[i, 7]
+	    if (!isColor(color)) {
+		  color <- "grey"
+		}
+	    height <- qry_highlight[i, 5]
+        rect(qry_highlight[i, 2] + 1, upper_ycenter - height / 2,
+	         qry_highlight[i, 3], upper_ycenter + height / 2,
+	         col=color, border=color)
+	  }
+	}
+  }
+
   
   # connections
   for (i in 1:nrow(aln)) {
     band_gradient_col <- allcols[which.min(abs(identity20 - aln[i, "identity"]))]
-    bandconnect(topregion=aln[i, 1:2], topheight=0.835,
-                bottomregion=aln[i, 3:4], bottomheight=0.17,
+    bandconnect(topregion=aln[i, 1:2], topheight=upper_ycenter - upper_adj - 0.005,
+                bottomregion=aln[i, 3:4], bottomheight=lower_ycenter + lower_adj + 0.005,
                 border=NA, bandcol=band_gradient_col)
   }
   
   # text labels
   xlabels <- qry
   ylabels <- subj
-  text(x= -max.xsize / 50, y=0.93, labels=xlabels, cex=0.8, xpd=T, pos=4)
-  text(x= -max.xsize / 50, y=0.05, labels=ylabels, cex=0.8, xpd=T, pos=4)
+  text(x= -max.xsize / 50, y=upper_ycenter + upper_adj + 0.04,
+       labels=xlabels, cex=0.8, xpd=T, pos=4)
+  text(x= -max.xsize / 50, y=lower_ycenter - lower_adj - 0.055,
+       labels=ylabels, cex=0.8, xpd=T, pos=4)
 
   ### identity legends
-  barlen <- max.xsize / 5
+  bar_ypos <- 0.99
+  barlen <- max.xsize / 4
   barstep <- barlen / color_num
   barheight <- 0.02
-  text(max.xsize - barlen/2, 0.975, labels = "identity", cex=0.6, pos=1, xpd=T)  ### plot LD name
+  text(max.xsize - barlen/2, bar_ypos, labels = "identity", cex=0.8, pos=1, xpd=T)  ### plot LD name
   barlabels <- c(identity_low, identity_high)
   barlabels.num <- floor(barlabels * color_num)
-  text(max.xsize-barlen, 0.985, labels=identity_low, cex=0.6, pos=1)  ### plot low identity
-  text(max.xsize, 0.985, labels=identity_high, cex=0.6, pos=1)  ### plot low identity
+  identity_low <- round(identity_low, 1)
+  text(max.xsize-barlen, bar_ypos+0.01, labels=identity_low, cex=0.7, pos=1)  ### plot low identity
+  identity_high <- round(identity_high, 1)
+  if (identity_high == 100) {
+  	identity_high <- round(identity_high, 0)
+  }
+  text(max.xsize, bar_ypos+0.01, labels=identity_high, cex=0.7, pos=1)  ### plot low identity
   
   # color bars for identity legends
   col_barpos <- max.xsize-barlen
   for (i in 1:color_num) {
-    rect(col_barpos, 0.975, col_barpos + barstep, 0.975 + barheight,
+    rect(col_barpos, bar_ypos,
+	     col_barpos + barstep, bar_ypos + barheight,
          border=NA, col=allcols[i])
     col_barpos <- col_barpos + barstep
   }
@@ -191,4 +231,6 @@ nucmerplot <- function(datafile, band_col="deepskyblue4", outpath=".", imageoutf
 }
 
 # execute plotting
-nucmerplot(datafile=nucmer_show, band_col=band_color, outpath=outdir, imageoutfile=outpdf)
+nucmerplot(datafile=nucmer_show, band_col=band_color, outpath=outdir,
+           imageoutfile=outpdf)
+

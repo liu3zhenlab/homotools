@@ -17,7 +17,7 @@ use Term::ANSIColor qw(:constants);
 #use lib "$FindBin::Bin/lib";
 #use xxx;
 
-my $version = "0.1.3";
+my $version = "0.1.4";
 
 my $strand = "plus";
 my $prefix = "hpout";
@@ -25,16 +25,19 @@ my $threads = 1;
 my $identity = 80;
 my $match = 100;
 my $coverage = 0;
-my $evalue = '1e-50';
+my $evalue = '1e-30';
 my $left_ext = 0;
 my $right_ext = 0;
 my $expand = 10;
-my $bandcol = "deepskyblue4";
+my $bandcol = "bisque3";
+my $query_add = "empty";
 sub prompt {
     print <<EOF;
     Usage: perl $0 --query <fasta> --db <blast_db> [options]
     [Options]
     --query <file>   fasta file containing a sequence as the query; required
+    --qryadd <file>  bed file to highlight regions in query; optional 
+    [format]:chr start(0-based) end(1-based) label color(R compatible) height(0.01-0.1)
     --db <db_name>   blast database; required
     --dbacc <str>    accession name of reference database; optional
     --ref <file>     fasta file of the reference; optional
@@ -56,7 +59,7 @@ sub prompt {
     --prefix <str>   the output directory and the prefix for output files ($prefix)
     --threads <num>  number of cpus ($threads)
     --noblastn       skip blastn if specified
-	--bandcol <str>  a valid R color name ($bandcol)
+    --bandcol <str>  a valid R color name ($bandcol)
     --version        version information
     --help:          help information.
 EOF
@@ -69,13 +72,12 @@ exit;
 my %opts = ();
 my ($query, $db);
 
-&GetOptions(\%opts, "query=s", "db=s", "ref=s", "dbacc=s",
+&GetOptions(\%opts, "query=s", "qryadd=s", "db=s", "ref=s", "dbacc=s",
                     "strand=s", "tchr=s", "tstart=i", "tend=i",
                     "identity=i", "match=i", "coverage=i",
                     "lext=i", "rext=i", "expand=i",
                     "prefix=s", "threads=i", "bandcol=s",
-                    "noblastn",
-                    "version", "help");
+                    "noblastn", "version", "help");
 
 if (exists $opts{version}) {
 	print "$version\n";
@@ -84,12 +86,21 @@ if (exists $opts{version}) {
 
 &prompt if exists $opts{help} or !%opts;
 if (!exists $opts{query} or !exists $opts{db}) {
-	print STDERR "Both --query and --db are required\n";
+	print STDERR RED, "Both --query and --db are required\n", RESET;
 	&prompt;
 } else {
 	$query = $opts{query};
 	$db = $opts{db};
 }
+
+# query highlighted BED file:
+$query_add = $opts{qryadd} if exists $opts{qryadd};
+if ($query_add ne "empty" and !-f $query_add) {
+	&runreport("$query_add is not found");
+	print STDERR RED, "Exit\n", RESET;
+	exit;
+}
+
 
 my $target_chr = $opts{tchr} if exists $opts{tchr};
 
@@ -152,7 +163,7 @@ my $utilsPath = $scriptPath."/utils/";
 &cmd_check("blastdbcmd");
 &cmd_check("show-coords");
 
-&runreport("step 01: Requirement checked. Passed");
+&runreport("step 01: Requirement checked.");
 
 ###############################################
 # intermediate output
@@ -373,7 +384,6 @@ if (-f $target_fas) {
 ###############################################
 # compare via nucmer
 ###############################################
-
 `nucmer --maxmatch --delta $delta_out --threads $threads $query $target_fas`;
 `echo -e "qstart\tqend\tsstart\tsend\tqmatch\tsmatch\tidentity\tqlen\tslen\tqry\tsubj" > $nucmer_show`;
 `show-coords -HTl $delta_out >> $nucmer_show`;
@@ -390,8 +400,8 @@ if (-f $target_fas) {
 my $alnplot_r = $utilsPath."/nucmerplot.R";
 my $dotplot_r = $utilsPath."/dotplot.R";
 
-`Rscript $alnplot_r $nucmer_show $bandcol $prefix $alnplot_pdf`;
-`Rscript $alnplot_r $nucmer_filt_show $bandcol $prefix $filt_alnplot_pdf`;
+`Rscript $alnplot_r $nucmer_show $bandcol $query_add $prefix $alnplot_pdf`;
+`Rscript $alnplot_r $nucmer_filt_show $bandcol $query_add $prefix $filt_alnplot_pdf`;
 
 `Rscript $dotplot_r $nucmer_show $bandcol $prefix $dotplot_pdf`;
 `Rscript $dotplot_r $nucmer_filt_show $bandcol $prefix $filt_dotplot_pdf`;
@@ -404,7 +414,6 @@ my $dotplot_r = $utilsPath."/dotplot.R";
 if (! exists $opts{ref}) {
 	`rm $ref_fas*`;
 }
-
 
 ###############################################
 # module 1: check command availability

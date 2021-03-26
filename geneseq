@@ -46,11 +46,11 @@ if (-d $prefix) {
 ###############################################
 my $ori_gtf_out = $prefix."/".$prefix.".1.".$gene.".original.gtf";
 
-my $gtf_dir = $prefix."/".$prefix.".2.transcript.adjusted.GTF";
-if (!-d $gtf_dir) {
-	`mkdir $gtf_dir`;
+my $transcripts_dir = $prefix."/".$prefix.".2.transcripts";
+if (!-d $transcripts_dir) {
+	`mkdir $transcripts_dir`;
 }
-my $adj_gtf_prefix = $gtf_dir."/".$gene;
+my $adjpos_prefix = $transcripts_dir."/".$gene;
 
 my $gene_fas_out = $prefix."/".$prefix.".3.".$gene.".fasta";
 
@@ -58,7 +58,6 @@ my $gene_fas_out = $prefix."/".$prefix.".3.".$gene.".fasta";
 open(ORIGTF, ">", $ori_gtf_out) || die;
 
 ##############################################
-#1	gramene	gene	44289	49837	.	+	.	gene_id "Zm00001d027230"; gene_source "gramene"; gene_biotype "protein_coding";
 #1	gramene	transcript	44289	49837	.	+	.	gene_id "Zm00001d027230"; transcript_id "Zm00001d027230_T001"; gene_source "gramene"; gene_biotype "protein_coding"; transcript_source "gramene"; transcript_biotype "protein_coding";
 #exon
 #CDS
@@ -88,31 +87,30 @@ while (<GTF>) {
 					if ($strand eq "+") {
 						$gene_strand = "+";
 						$gene_start = $line[3] - $extension > 0 ? $line[3] - $extension : 1;
-						$start = $line[3] - $extension;
 						$adjust_line[3] = $line[3] - $gene_start + 1;
-						$adjust_line[4] = $line[4] - $start + 1;
+						$adjust_line[4] = $line[4] - $gene_start + 1;
 						$gene_end = $line[4] + $extension;
 					} elsif ($strand eq "-") {
 						$adjust_line[6] = "+";
 						$gene_start = $line[4] + $extension;
 						$gene_strand = "-";
-						$adjust_line[3] = 1;
-						$adjust_line[4] = $line[4] - $line[3] + 1;
-						$gene_end = $line[3] - $extension > 0; $line[3] - $extension : 1;
+						$adjust_line[3] = $gene_start - $line[4] + 1;
+						$adjust_line[4] = $gene_start - $line[3] + 1;
+						$gene_end = $line[3] - $extension > 0 ? $line[3] - $extension : 1;
 					}
 					$gene_found = 1;
 					$gene_info = join("\t", @adjust_line);
 
 				} elsif ($gene_found) {
-					&runreport("Gene found in GTF; GTF scanning completed");
+					&runreport("Gene found in GTF");
 					last;
 				}
 			} else {
-				print STDERR "format has problem; gene_id might not be used\n";
+				print STDERR "gene_id might not be used in GTF\n";
 				exit;
 			}
 		}
-		
+	
 		### transcripts
 		my $transcript_name;
 		if ($gene_found) {
@@ -136,16 +134,38 @@ while (<GTF>) {
 		}
 	}
 }
+
 close GTF;
 close ORIGTF;
+
+# if gene is not found:
+if (!$gene_found) {
+	&runreport("Gene are NOT found in GTF");
+	print STDERR RED, "Exit\n", RESET;
+	exit;
+}
 
 ###########################################
 ### output transcripts
 ###########################################
+my $gene_height = 0.015;
+my $gene_color = "gray60";
+my $exon_height = 0.05;
+my $exon_color = "steelblue1";
+my $cds_height = 0.05;
+my $cds_color = "steelblue3";
 foreach my $transcript (keys %transcripts) {
-	my $adj_gtf_out = $adj_gtf_prefix.".".$transcript.".adjusted.gtf";
+	my $adj_gtf_out = $adjpos_prefix.".".$transcript.".adjusted.gtf";
+	my $adj_bed_out = $adjpos_prefix.".".$transcript.".adjusted.bed";
+
 	open(ADJGTF, ">", $adj_gtf_out) || die;
+	open(ADJBED, ">", $adj_bed_out) || die;
+
 	print ADJGTF "$gene_info\n";
+
+	my $genebed = &gtf2bed($gene_info, $gene_height, $gene_color);
+	print ADJBED "$genebed\n";
+
 	my %transcript_exon_CDS_info = %{$transcripts{$transcript}};
 	
 	# exon
@@ -153,6 +173,8 @@ foreach my $transcript (keys %transcripts) {
 		my %pos_info = %{$transcript_exon_CDS_info{exon}};
 		foreach my $pos (sort {$a <=> $b} keys %pos_info) {
 			print ADJGTF "$pos_info{$pos}\n";
+			my $exonbed = &gtf2bed($pos_info{$pos}, $exon_height, $exon_color);
+			print ADJBED "$exonbed\n";
 		}
 	}
 
@@ -161,9 +183,15 @@ foreach my $transcript (keys %transcripts) {
 		my %pos_info = %{$transcript_exon_CDS_info{CDS}};
 		foreach my $pos (sort {$a <=> $b} keys %pos_info) {
 			print ADJGTF "$pos_info{$pos}\n";
+			my $cdsbed = &gtf2bed($pos_info{$pos}, $cds_height, $cds_color);
+			print ADJBED "$cdsbed\n";
 		}
+
 	}
+	
+	# close files
 	close ADJGTF;
+	close ADJBED;
 }
 
 ###########################################
@@ -177,7 +205,7 @@ while (<FAS>) {
 	chomp;
 	if (/^>(\S+)/) {
 		if (defined $seq_name) {
-			if ($se_qname eq $chromosome) {
+			if ($seq_name eq $chromosome) {
 				$seq{$seq_name} = $seq;
 				$chromosome_found = 1;
 				last;
@@ -224,7 +252,7 @@ if ($gene_end > $gene_start) {
 }
 
 open(GENEFAS, ">", $gene_fas_out) || die;
-print GENEFAS ">$gene_name\n";
+print GENEFAS ">$gene\n";
 # print in a certain length per line
 while (my $chunk = substr($gene_seq, 0, 80, "")) {
 	print GENEFAS "$chunk\n";
@@ -252,6 +280,22 @@ sub runreport {
 	print STDERR "  $injob.\n";
 	#print LOG "$dateinfo  ";    
 	#print LOG "  $injob.\n";
+}
+
+### GTF row to BED
+sub gtf2bed {
+# output a row of gtf data to a bed format
+# chr start end name height strand color
+	my ($gtf_row, $height, $color) = @_;
+	my @gtf = split(/\t/, $gtf_row);
+	#10	gramene	gene	1001	3460	.
+	my $bname = $gtf[0];
+	my $bstart = $gtf[3] - 1;
+	my $bend = $gtf[4];
+	my $group = $gtf[2];
+	my @bed_row = ($bname, $bstart, $bend, $group, $height, "+", $color);
+	my $bed_row = join("\t", @bed_row);
+	return $bed_row;
 }
 
 ### Usage information
