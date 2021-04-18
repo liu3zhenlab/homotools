@@ -14,10 +14,12 @@ use Getopt::Long;
 use File::Temp;
 use FindBin;
 use Term::ANSIColor qw(:constants);
-#use lib "$FindBin::Bin/lib";
-#use xxx;
+use FindBin;
+use lib "$FindBin::Bin/lib";
+use genegtfadjust;
+use maxbed;
 
-my $version = "0.1.4";
+my $version = "0.1.5";
 
 my $strand = "plus";
 my $prefix = "hpout";
@@ -47,6 +49,7 @@ sub prompt {
                      if specified, the value will be used as the left end
     --tend <num>     bp postion for the region end; optional
                      if specified, the value will be used as the right end
+    --tgtf <file>    the gene annotation GTF file of the target; optional
     --strand <str>   plus (or +) or minus (or -) ($strand)
     --evalue <str>   maximal E-value ($evalue)
     --identity <num> minimal percentage of identity from 0 to 100 ($identity)
@@ -73,7 +76,7 @@ my %opts = ();
 my ($query, $db);
 
 &GetOptions(\%opts, "query=s", "qryadd=s", "db=s", "ref=s", "dbacc=s",
-                    "strand=s", "tchr=s", "tstart=i", "tend=i",
+                    "strand=s", "tchr=s", "tstart=i", "tend=i", "tgtf=s",
                     "identity=i", "match=i", "coverage=i",
                     "lext=i", "rext=i", "expand=i",
                     "prefix=s", "threads=i", "bandcol=s",
@@ -101,7 +104,6 @@ if ($query_add ne "empty" and !-f $query_add) {
 	exit;
 }
 
-
 my $target_chr = $opts{tchr} if exists $opts{tchr};
 
 if ($opts{ref}) {
@@ -127,6 +129,7 @@ if (exists $opts{strand}) {
 	}
 }
 my $db_accession = exists $opts{dbacc} ? $opts{dbacc} : "db";
+my $target_gtf = $opts{tgtf} if exists $opts{tgtf};
 $evalue = $opts{evalue} if exists $opts{evalue};
 $identity = $opts{identity} if exists $opts{identity};
 $match = $opts{match} if exists $opts{match};
@@ -152,6 +155,9 @@ if (-d $prefix) {
 my $scriptPath = $FindBin::Bin;
 my $utilsPath = $scriptPath."/utils/";
 
+
+&runreport("Start to run homoplot");
+
 ###############################################
 # check requirments
 ###############################################
@@ -163,7 +169,7 @@ my $utilsPath = $scriptPath."/utils/";
 &cmd_check("blastdbcmd");
 &cmd_check("show-coords");
 
-&runreport("step 01: Requirement checked.");
+&runreport("step 01: Requirement checked");
 
 ###############################################
 # intermediate output
@@ -187,6 +193,18 @@ if (exists $opts{ref}) {
 
 # target fasta file
 my $target_fas = $prefix."/".$prefix.".4.target.fas";
+
+# target GTF and BED output prefix (only output if --tgtf is specified)
+my $target_adjust_gtf_prefix;
+my $target_annotation_gtf;
+if (defined $target_gtf) {
+	$target_annotation_gtf = $prefix."/".$prefix.".4b.target.raw.annotation.gtf";
+	my $target_annotation_dir = $prefix."/".$prefix.".4c.target.posadj.annotation";	
+	if (!-d $target_annotation_dir) {
+		`mkdir $target_annotation_dir`;
+	}
+	$target_adjust_gtf_prefix = $target_annotation_dir."/";
+}
 
 # nucmer output
 my $delta_out = $prefix."/".$prefix.".5a.delta";
@@ -224,7 +242,7 @@ if (!exists $opts{noblastn}) {
 
 	# filter 1: chr, match, identity, query coverage, and evalue
 	if (exists $opts{tchr}) {
-		`awk '\$3==$target_chr && \$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out > $blastn_filt`;
+		`awk '\$3==\"$target_chr\" && \$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out > $blastn_filt`;
 	} else {
 		`awk '\$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out > $blastn_filt`;
 	}
@@ -359,7 +377,7 @@ print STDERR "  - Final target range is: $target_chr:$target_start-$target_end.\
 ###############################################
 my $target_start_0base = $target_start - 1;
 my $strand_char = $strand eq "plus" ? "+" : "-";
-my $target_name = $db_accession."_".$query_name."_".$target_chr.":".$target_start."-".$target_end;
+my $target_name = $db_accession."_".$target_chr.":".$target_start."-".$target_end;
 `echo -e "$target_chr\t$target_start_0base\t$target_end\t$target_name\t.\t$strand_char" > $target_bed`;
 
 if (! exists $opts{ref}) {
@@ -372,6 +390,7 @@ if (-f $target_fas) {
 
 # getfasta
 `bedtools getfasta -fi $ref_fas -bed $target_bed -fo $target_fas -s -nameOnly`;
+my $target_final_name = $target_name."(".$strand_char.")";
 
 if (-f $target_fas) {
 	&runreport("step 07: target sequence extracted");
@@ -379,6 +398,34 @@ if (-f $target_fas) {
 	print STDERR RED, "target sequence failed to extract\n", RESET;
 	print STDERR RED, "Exit\n", RESET;
 	exit;
+}
+
+
+###############################################
+# annotation if supplied
+###############################################
+my $target_add = "empty";
+if (defined $target_gtf) {
+	`bedtools intersect -a $target_gtf -b $target_bed > $target_annotation_gtf`; # intersect segments
+	# adjust position to a newly defined start for gene information in a GTF
+	# and output a position-adjusted GTF and BED file for each transcript
+	my $start_to_adjusted = $target_start;
+	if ($strand eq "minus") {
+		 $start_to_adjusted = $target_end;
+	}
+	genegtfadjust::genegtfadjust($target_annotation_gtf, $start_to_adjusted, $target_adjust_gtf_prefix, $target_final_name);
+	&runreport("step 07b: target annotation extracted");
+	
+	# select the bed with the largest total bp lengths to highlighted
+	my $bedfiles = `ls $target_adjust_gtf_prefix*bed`;
+	chomp $bedfiles;
+	if ($bedfiles eq "") {
+		$target_add = "empty";
+		&runreport("step 07c: no target annotation files founded");
+	} else {
+		$target_add = maxbed::maxbed($bedfiles);
+		&runreport("step 07c: A BED file was selected: $target_add");
+	}
 }
 
 ###############################################
@@ -400,8 +447,8 @@ if (-f $target_fas) {
 my $alnplot_r = $utilsPath."/nucmerplot.R";
 my $dotplot_r = $utilsPath."/dotplot.R";
 
-`Rscript $alnplot_r $nucmer_show $bandcol $query_add $prefix $alnplot_pdf`;
-`Rscript $alnplot_r $nucmer_filt_show $bandcol $query_add $prefix $filt_alnplot_pdf`;
+`Rscript $alnplot_r $nucmer_show $bandcol $query_add $target_add $prefix $alnplot_pdf`;
+`Rscript $alnplot_r $nucmer_filt_show $bandcol $query_add $target_add $prefix $filt_alnplot_pdf`;
 
 `Rscript $dotplot_r $nucmer_show $bandcol $prefix $dotplot_pdf`;
 `Rscript $dotplot_r $nucmer_filt_show $bandcol $prefix $filt_dotplot_pdf`;

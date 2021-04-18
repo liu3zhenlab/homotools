@@ -1,3 +1,0 @@
-10	gramene	gene	1	1488	.	+	.	gene_id "Zm00001d026121"; gene_source "gramene"; gene_biotype "protein_coding";
-10	gramene	exon	1	1488	.	+	.	gene_id "Zm00001d026121"; transcript_id "Zm00001d026121_T001"; exon_number "1"; gene_source "gramene"; gene_biotype "protein_coding"; transcript_source "gramene"; transcript_biotype "protein_coding"; exon_id "Zm00001d026121_T001.exon1";
-10	gramene	CDS	1	1485	.	+	0	gene_id "Zm00001d026121"; transcript_id "Zm00001d026121_T001"; exon_number "1"; gene_source "gramene"; gene_biotype "protein_coding"; transcript_source "gramene"; transcript_biotype "protein_coding"; protein_id "Zm00001d026121_P001";

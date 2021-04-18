@@ -7,17 +7,23 @@ use strict;
 use warnings;
 use Getopt::Long;
 use Term::ANSIColor qw(:constants);
+#use File::Temp;
+use FindBin;
+use lib "$FindBin::Bin/lib";
+use genegtfadjust;
 
-my $extension = 0;
+my $extension_5p = 0;
+my $extension_3p = 0;
 my $prefix = "GS";
 my ($fas, $gtf, $gene, $transcript, $help);
 my $result = &GetOptions("fas|f=s"        => \$fas,
                          "gtf|i=s"        => \$gtf,
-						 "gene|g=s"       => \$gene,
-						 "ext|e=i"        => \$extension,
-						 "transcript|t=s" => \$transcript,
-						 "prefix|p=s"     => \$prefix,
-						 "help|h"         => \$help
+                         "gene|g=s"       => \$gene,
+                         "ext5|e=i"       => \$extension_5p,
+                         "ext3|x=i"       => \$extension_3p,
+                         "transcript|t=s" => \$transcript,
+                         "prefix|p=s"     => \$prefix,
+                         "help|h"         => \$help
 );
 
 ### print help information if errors occur:
@@ -26,13 +32,12 @@ if ($help or !defined $fas or !defined $gtf or !defined $gene) {
 	exit;
 }
 
-
 ###############################################
 ## preparation
 ################################################
 # create a directory for outputs
 if (-d $prefix) {
-    print STDERR RED, "Warning: the directory $prefix exists.\n", RESET;
+	print STDERR RED, "Warning: the directory $prefix exists.\n", RESET;
 } else {
 	`mkdir $prefix`;
 }
@@ -41,21 +46,22 @@ if (-d $prefix) {
 #my $scriptPath = $FindBin::Bin;
 #my $utilsPath = $scriptPath."/utils/";
 
+&runreport("Start to run geneseq");
+
 ##############################################
 # intermediate output
 ###############################################
 my $ori_gtf_out = $prefix."/".$prefix.".1.".$gene.".original.gtf";
+open(ORIGTF, ">", $ori_gtf_out) || die;
 
 my $transcripts_dir = $prefix."/".$prefix.".2.transcripts";
 if (!-d $transcripts_dir) {
 	`mkdir $transcripts_dir`;
 }
-my $adjpos_prefix = $transcripts_dir."/".$gene;
+#my $adjpos_prefix = $transcripts_dir."/".$gene;
+my $adjpos_prefix = $transcripts_dir."/";
 
 my $gene_fas_out = $prefix."/".$prefix.".3.".$gene.".fasta";
-
-##############################################
-open(ORIGTF, ">", $ori_gtf_out) || die;
 
 ##############################################
 #1	gramene	transcript	44289	49837	.	+	.	gene_id "Zm00001d027230"; transcript_id "Zm00001d027230_T001"; gene_source "gramene"; gene_biotype "protein_coding"; transcript_source "gramene"; transcript_biotype "protein_coding";
@@ -65,139 +71,74 @@ open(ORIGTF, ">", $ori_gtf_out) || die;
 ###########################################
 # open GTF file and read gene information
 ###########################################
-my ($gene_name, $gene_start, $gene_end, $gene_strand, $gene_info);
-my $chromosome;
+my ($gene_name, $gene_start, $gene_end, $gene_strand);
+my ($chromosome, %transcripts);
 my $gene_found = 0;
-my %transcripts;
 open(GTF, "<", $gtf) || die;
 while (<GTF>) {
 	if (!/^$/ and !/^#/) { # nonempty lines
 		chomp;
 		my @line = split(/\t/, $_);
-		my @adjust_line = @line;
 		my $info = $line[8];
-		my $feature = $line[2];
-		my $strand = $line[6];
-		if ($feature eq "gene") {
-			if ($info =~ /^gene_id \"(.+?)\";/) {
-				$gene_name = $1;
-				if ($gene_name eq $gene) {
-					$chromosome = $line[0]; # chromosome ID;
-					print ORIGTF "$_\n";
-					if ($strand eq "+") {
-						$gene_strand = "+";
-						$gene_start = $line[3] - $extension > 0 ? $line[3] - $extension : 1;
-						$adjust_line[3] = $line[3] - $gene_start + 1;
-						$adjust_line[4] = $line[4] - $gene_start + 1;
-						$gene_end = $line[4] + $extension;
-					} elsif ($strand eq "-") {
-						$adjust_line[6] = "+";
-						$gene_start = $line[4] + $extension;
-						$gene_strand = "-";
-						$adjust_line[3] = $gene_start - $line[4] + 1;
-						$adjust_line[4] = $gene_start - $line[3] + 1;
-						$gene_end = $line[3] - $extension > 0 ? $line[3] - $extension : 1;
-					}
-					$gene_found = 1;
-					$gene_info = join("\t", @adjust_line);
-
-				} elsif ($gene_found) {
-					&runreport("Gene found in GTF");
-					last;
+		if ($info =~ /gene_id \"(.+?)\";/) {
+			$gene_name = $1;
+			if ($gene_name eq $gene) {
+				if (!defined $chromosome) {
+					$chromosome = $line[0];
 				}
-			} else {
-				print STDERR "gene_id might not be used in GTF\n";
-				exit;
-			}
-		}
-	
-		### transcripts
-		my $transcript_name;
-		if ($gene_found) {
-			if ($info =~ /^gene_id \"(.+?)\"; transcript_id \"(.+?)\"/) {
-				if ($1 eq $gene) {
-					$transcript_name = $2;
-					
-					if ($line[2] eq "exon" or $line[2] eq "CDS") {
-						my @exon_CDS_info = @adjust_line;
-						$adjust_line[3] = abs($adjust_line[3] - $gene_start) + 1;
-						$adjust_line[4] = abs($adjust_line[4] - $gene_start) + 1;
-						@exon_CDS_info[3..4] = sort {$a <=> $b} @adjust_line[3..4];
-						$exon_CDS_info[6] = "+";
-						my $exon_CDS_info = join("\t", @exon_CDS_info);
-						$transcripts{$transcript_name}{$line[2]}{$exon_CDS_info[3]} = $exon_CDS_info;
+				print ORIGTF "$_\n";
+				$gene_found = 1;
+				$gene_strand = $line[6];
+				if ($gene_strand eq "+") {
+					if (!defined $gene_start) {
+						$gene_start = $line[3];
+						$gene_end = $line[4];
+					} else {
+						$gene_start = &min($gene_start, $line[3]);
+						$gene_end = &max($gene_end, $line[4]);
 					}
-
-					print ORIGTF "$_\n";
+				} else {
+					if (!defined $gene_start) {
+						$gene_start = $line[4];
+						$gene_end = $line[3];
+					} else {
+						$gene_start = &max($gene_start, $line[3]);
+						$gene_end = &min($gene_end, $line[4]);
+					}
 				}
+			} elsif ($gene_found) { # when gene name does not match input gene name
+				&runreport("Gene was found in GTF");
+				last;
 			}
 		}
 	}
 }
-
 close GTF;
 close ORIGTF;
 
-# if gene is not found:
+# output adjusted GTF and BED
+if ($gene_strand eq "+") {
+	$gene_start -= $extension_5p;
+	$gene_end += $extension_3p;
+} elsif ($gene_strand eq "-") {
+	$gene_start += $extension_5p;
+	$gene_end -= $extension_3p;
+}
+
 if (!$gene_found) {
 	&runreport("Gene are NOT found in GTF");
 	print STDERR RED, "Exit\n", RESET;
 	exit;
-}
-
-###########################################
-### output transcripts
-###########################################
-my $gene_height = 0.015;
-my $gene_color = "gray60";
-my $exon_height = 0.05;
-my $exon_color = "steelblue1";
-my $cds_height = 0.05;
-my $cds_color = "steelblue3";
-foreach my $transcript (keys %transcripts) {
-	my $adj_gtf_out = $adjpos_prefix.".".$transcript.".adjusted.gtf";
-	my $adj_bed_out = $adjpos_prefix.".".$transcript.".adjusted.bed";
-
-	open(ADJGTF, ">", $adj_gtf_out) || die;
-	open(ADJBED, ">", $adj_bed_out) || die;
-
-	print ADJGTF "$gene_info\n";
-
-	my $genebed = &gtf2bed($gene_info, $gene_height, $gene_color);
-	print ADJBED "$genebed\n";
-
-	my %transcript_exon_CDS_info = %{$transcripts{$transcript}};
-	
-	# exon
-	if (exists $transcript_exon_CDS_info{exon}) {
-		my %pos_info = %{$transcript_exon_CDS_info{exon}};
-		foreach my $pos (sort {$a <=> $b} keys %pos_info) {
-			print ADJGTF "$pos_info{$pos}\n";
-			my $exonbed = &gtf2bed($pos_info{$pos}, $exon_height, $exon_color);
-			print ADJBED "$exonbed\n";
-		}
-	}
-
-	# CDS
-	if (exists $transcript_exon_CDS_info{CDS}) {
-		my %pos_info = %{$transcript_exon_CDS_info{CDS}};
-		foreach my $pos (sort {$a <=> $b} keys %pos_info) {
-			print ADJGTF "$pos_info{$pos}\n";
-			my $cdsbed = &gtf2bed($pos_info{$pos}, $cds_height, $cds_color);
-			print ADJBED "$cdsbed\n";
-		}
-
-	}
-	
-	# close files
-	close ADJGTF;
-	close ADJBED;
+} else {
+	# adjust position to a newly defined start for gene information in a GTF
+	# and output a position-adjusted GTF and BED file for each transcript
+	genegtfadjust::genegtfadjust($ori_gtf_out, $gene_start, $adjpos_prefix, $gene);
 }
 
 ###########################################
 ### chromosome sequence
 ###########################################
-my ($seq_name, $seq, $seq_len);
+my ($seq_name, $seq, $seq_len, $chr_seq);
 my $chromosome_found = 0;
 my %seq;
 open(FAS, "<", $fas) || die;
@@ -206,7 +147,7 @@ while (<FAS>) {
 	if (/^>(\S+)/) {
 		if (defined $seq_name) {
 			if ($seq_name eq $chromosome) {
-				$seq{$seq_name} = $seq;
+				$chr_seq = $seq;
 				$chromosome_found = 1;
 				last;
 			}
@@ -219,22 +160,21 @@ while (<FAS>) {
 }
 # last sequence:
 if ((!$chromosome_found) and ($seq_name eq $chromosome)) {
-	$seq{$seq_name} = $seq;
+	$chr_seq = $seq;
 	$chromosome_found = 1;
 }
 close FAS;
-
-$seq_len = length($seq{$chromosome});  # chromosome length
-
-if (($gene_start > $seq_len) or ($gene_end > $seq_len)) {
-	print STDERR RED, "extension beyond the chromosome range\n", RESET;
-	exit;
-}
 
 if ($chromosome_found) {
 	&runreport("chromosome/target sequence found");	
 } else {
 	print STDERR RED, "no chromosome/target sequence found\n", RESET;
+	exit;
+}
+
+$seq_len = length($chr_seq);  # chromosome length
+if (($gene_start > $seq_len) or ($gene_end > $seq_len)) {
+	print STDERR RED, "extension beyond the chromosome range\n", RESET;
 	exit;
 }
 
@@ -244,15 +184,15 @@ if ($chromosome_found) {
 my $gene_seq;
 if ($gene_end > $gene_start) {
 	# strand +
-	$gene_seq = substr($seq{$chromosome}, $gene_start - 1, $gene_end - $gene_start + 1);
+	$gene_seq = substr($chr_seq, $gene_start - 1, $gene_end - $gene_start + 1);
 } else {
 	# strand -
-	$gene_seq = substr($seq{$chromosome}, $gene_end - 1, $gene_start - $gene_end + 1);
+	$gene_seq = substr($chr_seq, $gene_end - 1, $gene_start - $gene_end + 1);
 	$gene_seq = &revcom($gene_seq);
 }
 
 open(GENEFAS, ">", $gene_fas_out) || die;
-print GENEFAS ">$gene\n";
+print GENEFAS ">$gene\($gene_strand\)\n";
 # print in a certain length per line
 while (my $chunk = substr($gene_seq, 0, 80, "")) {
 	print GENEFAS "$chunk\n";
@@ -282,29 +222,32 @@ sub runreport {
 	#print LOG "  $injob.\n";
 }
 
-### GTF row to BED
-sub gtf2bed {
-# output a row of gtf data to a bed format
-# chr start end name height strand color
-	my ($gtf_row, $height, $color) = @_;
-	my @gtf = split(/\t/, $gtf_row);
-	#10	gramene	gene	1001	3460	.
-	my $bname = $gtf[0];
-	my $bstart = $gtf[3] - 1;
-	my $bend = $gtf[4];
-	my $group = $gtf[2];
-	my @bed_row = ($bname, $bstart, $bend, $group, $height, "+", $color);
-	my $bed_row = join("\t", @bed_row);
-	return $bed_row;
+### minimum value
+sub min {
+	my @order_num = sort {$a <=> $b} @_;
+	return $order_num[0];
 }
+
+### maximum value
+sub max {
+	my @order_num = sort {$b <=> $a} @_;
+	return $order_num[0];
+}
+
 
 ### Usage information
 sub errINF {
 	print <<EOF;
 Usage: geneseq --fas <fasta> [--feature <str> or --list <file>]
 [Options]
-    --fas|f <file>      : fasta file (required)
-    --help:             : help information
+  --fas|f <file>     : reference fasta file (required)
+  --gene <str>       : gene name (required)
+  --gtf <file>       : GTF file (required)
+  --ext5 <num>       : bp extension from 5' site ($extension_5p)
+  --ext3 <num>       : bp extension from 3' site ($extension_3p)
+  --transcript <str> : transcript (optional)
+  --prefix <str>     : prefix name for outputs ($prefix)
+  --help             : help information
 EOF
 	exit;
 }

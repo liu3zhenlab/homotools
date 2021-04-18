@@ -4,8 +4,9 @@ args <- commandArgs(trailingOnly=T)
 nucmer_show <- args[1] # nucmer show-coordi output
 band_color <- args[2] # color to be used for plotting
 query_highlight_bed <- args[3] # bed file for region highlight
-outdir <- args[4] # PDF output directory
-outpdf <- args[5] # PDF output file
+target_highlight_bed <- args[4] # bed file for region highlight
+outdir <- args[5] # PDF output directory
+outpdf <- args[6] # PDF output file
 
 ###########################################################
 #' module to determine xaxis
@@ -184,7 +185,30 @@ nucmerplot <- function(datafile, band_col="deepskyblue4", outpath=".", imageoutf
 	}
   }
 
-  
+  # target highlights
+  highlight_names <- NULL
+  if (target_highlight_bed != "empty") { # highlight regions on query
+    #chr start end label height strand color
+	#10	1000	2488	gene	gray60	+	0.015
+	target_highlight <- read.delim(target_highlight_bed, comment.char="#", header=F)
+	if (nrow(target_highlight)>0) {
+	  lower_adj <- max(target_highlight[, 5]) / 2
+	  highlight_names <- target_highlight[!duplicated(target_highlight[, 4]), 4]
+	  highlight_colors <- target_highlight[!duplicated(target_highlight[, 4]), 7]
+      for (i in 1:nrow(target_highlight)) {
+	    color <- target_highlight[i, 7]
+	    if (!isColor(color)) {
+		  color <- "grey"
+		}
+	    height <- target_highlight[i, 5]
+        rect(target_highlight[i, 2] + 1, lower_ycenter - height / 2,
+	         target_highlight[i, 3], lower_ycenter + height / 2,
+	         col=color, border=color)
+	  }
+	}
+  }
+
+
   # connections
   for (i in 1:nrow(aln)) {
     band_gradient_col <- allcols[which.min(abs(identity20 - aln[i, "identity"]))]
@@ -200,6 +224,14 @@ nucmerplot <- function(datafile, band_col="deepskyblue4", outpath=".", imageoutf
        labels=xlabels, cex=0.8, xpd=T, pos=4)
   text(x= -max.xsize / 50, y=lower_ycenter - lower_adj - 0.055,
        labels=ylabels, cex=0.8, xpd=T, pos=4)
+
+  #homo2A188/homo2A188.4c.target.posadj.annotation/Zm00001d042944_T001.adjusted.bed
+  if (target_highlight_bed != "empty") {
+  	transcript <- gsub(".*\\/", "", target_highlight_bed)
+	transcript <- gsub(".adjusted.bed", "", transcript);
+	text(x= max.xsize / 2, y=lower_ycenter + lower_adj,
+	    labels=transcript, cex=0.8, xpd=T, pos=3)
+  }
 
   ### identity legends
   bar_ypos <- 0.99
