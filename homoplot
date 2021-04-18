@@ -55,7 +55,8 @@ sub prompt {
     --identity <num> minimal percentage of identity from 0 to 100 ($identity)
     --match <num>    minimal bp match of an alignment ($match)
     --coverage <num> minimal coverage of the query ($coverage)
-    --lext <num>     extended bp from the left side ($left_ext);
+    --repeatdust     remove repetitive blastn alignments if specified
+	--lext <num>     extended bp from the left side ($left_ext);
     --rext <num>     extended bp from the right side ($right_ext);
     --expand <num>   expand scale relative to the query length ($expand)
                      e.g., 1kb query, 1kb x $expand extened from both sides will be scanned for the hit range
@@ -73,11 +74,11 @@ exit;
 # parameters:
 ###############################################
 my %opts = ();
-my ($query, $db);
+my ($query, $db, $repeatdust);
 
 &GetOptions(\%opts, "query=s", "qryadd=s", "db=s", "ref=s", "dbacc=s",
                     "strand=s", "tchr=s", "tstart=i", "tend=i", "tgtf=s",
-                    "identity=i", "match=i", "coverage=i",
+                    "identity=i", "match=i", "coverage=i", "repeatdust",
                     "lext=i", "rext=i", "expand=i",
                     "prefix=s", "threads=i", "bandcol=s",
                     "noblastn", "version", "help");
@@ -175,6 +176,7 @@ my $utilsPath = $scriptPath."/utils/";
 # intermediate output
 ###############################################
 # blastn output
+my $blastn_raw = $prefix."/".$prefix.".1.raw.blastn";
 my $blastn_out = $prefix."/".$prefix.".1.blastn";
 
 # filtered blastn output
@@ -227,19 +229,30 @@ my ($target_start, $target_end);
 my ($query_name,$query_length, $subj_length);
 
 if (!exists $opts{noblastn}) {
-	`blastn -db $db -query $query -evalue $evalue -num_threads $threads -outfmt "$blastn_fmt" > $blastn_out`;
+	`blastn -db $db -query $query -evalue $evalue -num_threads $threads -outfmt "$blastn_fmt" > $blastn_raw`;
 
-	if (-z $blastn_out) { # empty?
+	if (-z $blastn_raw) { # empty?
 		&runreport("step 02: no Blastn alignments found");
 		print STDERR RED, "Exit\n", RESET;
 		exit;
 	} else {
-		my $blastn_nrow=`wc -l $blastn_out`;
+		my $blastn_nrow=`wc -l $blastn_raw`;
 		chomp $blastn_nrow;
 		&runreport("step 02: Blastn alignments generated");
 		print STDERR "  - hits: $blastn_nrow\n";
 	}
 
+	# dust repeated alignments
+	if ($repeat_dust) {
+		`perl $utilsPath/repeatdust.pl $blastn_raw > $blastn_out`;
+		my $blastn2_nrow=`wc -l $blastn_raw`;
+		chomp $blastn2_nrow;
+		&runreport("step 02b: Blastn repetitive alignments removed");
+		print STDERR "  - hits: $blastn2_nrow\n";
+	} else {
+		`mv $blastn_raw $blastn_out`;
+	}
+	
 	# filter 1: chr, match, identity, query coverage, and evalue
 	if (exists $opts{tchr}) {
 		`awk '\$3==\"$target_chr\" && \$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out > $blastn_filt`;

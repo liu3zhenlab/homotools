@@ -239,6 +239,8 @@ sub max {
 sub errINF {
 	print <<EOF;
 Usage: geneseq --fas <fasta> [--feature <str> or --list <file>]
+- extract fasta sequence and gtf information for the input gene
+- and produce a new gtf with adjusted positions relative to gene fasta
 [Options]
   --fas|f <file>     : reference fasta file (required)
   --gene <str>       : gene name (required)
