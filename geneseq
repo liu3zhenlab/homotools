@@ -192,7 +192,8 @@ if ($gene_end > $gene_start) {
 }
 
 open(GENEFAS, ">", $gene_fas_out) || die;
-print GENEFAS ">$gene\($gene_strand\)\n";
+#print GENEFAS ">$gene\($gene_strand\)\n";
+print GENEFAS ">$gene\n";
 # print in a certain length per line
 while (my $chunk = substr($gene_seq, 0, 80, "")) {
 	print GENEFAS "$chunk\n";

@@ -56,7 +56,7 @@ sub prompt {
     --match <num>    minimal bp match of an alignment ($match)
     --coverage <num> minimal coverage of the query ($coverage)
     --repeatdust     remove repetitive blastn alignments if specified
-	--lext <num>     extended bp from the left side ($left_ext);
+    --lext <num>     extended bp from the left side ($left_ext);
     --rext <num>     extended bp from the right side ($right_ext);
     --expand <num>   expand scale relative to the query length ($expand)
                      e.g., 1kb query, 1kb x $expand extened from both sides will be scanned for the hit range
@@ -74,7 +74,7 @@ exit;
 # parameters:
 ###############################################
 my %opts = ();
-my ($query, $db, $repeatdust);
+my ($query, $db);
 
 &GetOptions(\%opts, "query=s", "qryadd=s", "db=s", "ref=s", "dbacc=s",
                     "strand=s", "tchr=s", "tstart=i", "tend=i", "tgtf=s",
@@ -243,11 +243,11 @@ if (!exists $opts{noblastn}) {
 	}
 
 	# dust repeated alignments
-	if ($repeat_dust) {
+	if (exists $opts{repeatdust}) {
 		`perl $utilsPath/repeatdust.pl $blastn_raw > $blastn_out`;
-		my $blastn2_nrow=`wc -l $blastn_raw`;
+		my $blastn2_nrow=`wc -l $blastn_out`;
 		chomp $blastn2_nrow;
-		&runreport("step 02b: Blastn repetitive alignments removed");
+		&runreport("step 02b: Repetitive blastn alignments removed");
 		print STDERR "  - hits: $blastn2_nrow\n";
 	} else {
 		`mv $blastn_raw $blastn_out`;
