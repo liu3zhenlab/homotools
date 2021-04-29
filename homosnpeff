@@ -1,0 +1,179 @@
+#!/usr/bin/perl -w
+#======================================================================
+# homosnpeff
+# Author: Sanzhen Liu <liu3zhen@ksu.edu>
+# 4/24/2021
+#
+# The Perl script to evalue effects of variants
+#======================================================================
+
+use strict;
+use warnings;
+use Getopt::Long;
+use File::Temp;
+use FindBin;
+use Term::ANSIColor qw(:constants);
+use FindBin;
+use lib "$FindBin::Bin/lib";
+use genegtfadjust;
+use maxbed;
+
+my $version = "0.1.6";
+
+my $prefix = "homosnpeff";
+my $identity = 95;
+my $match = 100;
+
+sub prompt {
+    print <<EOF;
+    Usage: perl $0 --ref <fasta> --gtf <gtf> --qry <fasta> [options]
+    [Options]
+    --ref <file>     fasta file of the reference sequence; required
+    --gtf <file>     gtf annotation for the reference sequence; required
+    --qry <file>     fasta file containing a sequence as the query; required
+    --identity <num> minimum identity (0-100) ($identity)
+    --match <num>    minimum match length (bp) ($match)
+    --prefix <str>   the output directory and the prefix for output files ($prefix)
+    --version        version information
+    --help:          help information
+EOF
+exit;
+}
+
+###############################################
+# parameters:
+###############################################
+my %opts = ();
+my ($qry, $ref, $gtf);
+
+&GetOptions(\%opts, "ref=s", "gtf=s", "qry=s", "match=i",
+                    "prefix=s", "version", "help");
+
+if (exists $opts{version}) {
+	print "$version\n";
+	exit;
+}
+
+&prompt if exists $opts{help} or !%opts;
+if (!exists $opts{qry} or !exists $opts{ref} or !exists $opts{gtf}) {
+	print STDERR RED, "Both --query, --ref, and --gtf are required\n", RESET;
+	&prompt;
+} else {
+	$qry = $opts{qry};
+	$ref = $opts{ref};
+	$gtf = $opts{gtf};
+}
+
+$prefix = $opts{prefix} if exists $opts{prefix};
+$identity = $opts{identity} if exists $opts{identity};
+$match = $opts{match} if exists $opts{match};
+
+###############################################
+# preparation
+###############################################
+# create a directory for outputs
+if (-d $prefix) {
+	print STDERR RED, "Warning: the directory $prefix exists.\n", RESET;
+} else {
+	`mkdir $prefix`;
+}
+
+#my $data_dir = $prefix."/data";
+my $data_dir = "data";
+if (-d $data_dir) {
+	`rm -rf $data_dir`;
+}
+
+`mkdir $data_dir`;
+`mkdir $data_dir/ref`;
+
+# script path:
+my $scriptPath = $FindBin::Bin;
+my $libPath = $scriptPath."/lib/";
+my $utilsPath = $scriptPath."/utils/";
+
+&runreport("Start to run homosnpeff");
+
+###############################################
+# check requirments
+###############################################
+&cmd_check("java");
+&cmd_check("nucmer");
+&cmd_check("delta-filter");
+&cmd_check("show-snps");
+
+&runreport("step 01: Requirement checked");
+
+###############################################
+# intermediate output
+###############################################
+
+my $delta_prefix = $prefix."/".$prefix.".1";
+my $filt_delta_prefix = $prefix."/".$prefix.".2.filt";
+
+###############################################
+# nucmer
+###############################################
+`nucmer --prefix $delta_prefix $ref $qry`;
+# filtered alignments:
+`delta-filter -i $identity -l $match -1 $delta_prefix.delta > $filt_delta_prefix.delta`;
+`show-snps -T $filt_delta_prefix.delta > $filt_delta_prefix.snps`;
+`perl $utilsPath/showsnps2vcf.pl --fasta $ref --var $filt_delta_prefix.snps > $filt_delta_prefix.vcf`;
+&runreport("step 02: nucmer comparion and variants discovery");
+
+
+###############################################
+# snpEff
+###############################################
+# prep for snpEff
+`cp $ref $data_dir/ref/sequences.fa`;
+`cp $gtf $data_dir/ref/genes.gtf`;
+`cp $libPath/snpEff/snpEff.jar .`;
+`cp $libPath/snpEff/snpEff.config .`;
+`java -jar snpEff.jar build -dataDir $data_dir -c snpEff.config ref`;
+
+# snpEff
+`java -jar snpEff.jar eff ref $filt_delta_prefix.vcf > $filt_delta_prefix.vcf.eff`;
+&runreport("step 03: snpEff");
+
+###############################################
+# cleanup
+###############################################
+if (-f "snpEff_summary.html") {
+	`mv snpEff_summary.html $prefix/$prefix.snpEff_summary.html`;
+}
+if (-f "snpEff_genes.txt") {
+	`rm snpEff_genes.txt`;
+}
+`rm snpEff.config ref`;
+`rm snpEff.jar`;
+`rm -rf $data_dir`;
+
+
+###############################################
+# module 1: check command availability
+###############################################
+sub cmd_check {
+	my $cmd = shift;
+	my $cmdPath=`which $cmd 2>/dev/null`;
+	if (!$cmdPath) {# not founded
+		print STDERR RED, "  $cmd is not found\n", RESET;
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	}
+}
+
+###############################################
+# module 2: report running result
+###############################################
+# funtion to report running return
+sub runreport {
+	my $injob = shift;
+    my $dateinfo = `date +'o %Y-%m-%d %H:%M:%S'`;
+	print STDERR MAGENTA, "$dateinfo", RESET;
+	print STDERR "  $injob.\n";
+	#print LOG "$dateinfo  ";    
+	#print LOG "  $injob.\n";
+}
+
+
