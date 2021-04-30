@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 #======================================================================
-# homoplot
+# homocomp
 #
 # Author: Sanzhen Liu <liu3zhen@ksu.edu>
 # 3/2/2021
@@ -45,9 +45,9 @@ sub prompt {
     --ref <file>     fasta file of the reference; optional
                      if not supplied, reference sequences will be extracted from --db
     --tchr <str>     targeted chromosome or contig; optional
-    --tstart <num>   bp postion for the region start; optional
+    --tstart <num>   bp position for the region start; optional
                      if specified, the value will be used as the left end
-    --tend <num>     bp postion for the region end; optional
+    --tend <num>     bp position for the region end; optional
                      if specified, the value will be used as the right end
     --tgtf <file>    the gene annotation GTF file of the target; optional
     --strand <str>   plus (or +) or minus (or -) ($strand)
@@ -157,7 +157,7 @@ my $scriptPath = $FindBin::Bin;
 my $utilsPath = $scriptPath."/utils/";
 
 
-&runreport("Start to run homoplot");
+&runreport("Start to run homocomp");
 
 ###############################################
 # check requirments
