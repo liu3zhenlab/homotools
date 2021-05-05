@@ -1,0 +1,190 @@
+#!/usr/bin/perl -w
+#======================================================================
+# homostack
+#
+# Author: Sanzhen Liu <liu3zhen@ksu.edu>
+# 5/4/2021
+#
+# to stack alignments of multiple homologous sequences
+#======================================================================
+
+use strict;
+use warnings;
+use Getopt::Long;
+use File::Temp;
+use FindBin;
+use Term::ANSIColor qw(:constants);
+use FindBin;
+use lib "$FindBin::Bin/lib";
+use genegtfadjust;
+use maxbed;
+
+my $version = "0.1.6";
+
+my $identity = 80; 
+my $match = 100;
+my $prefix = "hsout";
+my $threads = 1;
+my $bandcol = "bisque3";
+
+sub prompt {
+    print <<EOF;
+    Usage: perl $0 --query <fasta> --db <blast_db> [options]
+    [Options]
+    --seq <file>     fasta file containing a sequence as the query; required
+                     multiple sequences can be input by using --seq multiple times
+    --annot <file>   bed file to highlight regions in query; optional 
+                     [format]:chr start(0-based) end(1-based) label color(R compatible) height(0.01-0.1)
+                     if specified, the number --annot needs to match the number of --seq
+    --identity <num> minimal percentage of identity from 0 to 100 ($identity)
+    --match <num>    minimal bp match of an alignment ($match)
+    --prefix <str>   the output directory and the prefix for output files ($prefix)
+    --threads <num>  number of cpus ($threads)
+    --bandcol <str>  a valid R color name ($bandcol)
+    --version        version information
+    --help:          help information.
+EOF
+exit;
+}
+
+###############################################
+# parameters:
+###############################################
+my %opts = ();
+my ($query, $db);
+
+&GetOptions(\%opts, "seq=s@", "annot=s@",
+                    "identity=i", "match=i",
+                    "prefix=s", "threads=i", "bandcol=s",
+                    "version", "help");
+
+if (exists $opts{version}) {
+	print "$version\n";
+	exit;
+}
+
+&prompt if exists $opts{help} or !%opts;
+my (@seq, @annot);
+
+if (!exists $opts{seq} or !exists $opts{annot}) {
+	print STDERR RED, "Both --seq and --annot are required\n", RESET;
+	&prompt;
+} else {
+	@seq = @{$opts{seq}} if exists $opts{seq};
+	@annot = @{$opts{annot}} if exists $opts{annot};
+}
+
+$identity = $opts{identity} if exists $opts{identity};
+$match = $opts{match} if exists $opts{match};
+$prefix = $opts{prefix} if exists $opts{prefix};
+$threads = $opts{threads} if exists $opts{threads};
+$bandcol = $opts{bandcol} if exists $opts{bandcol};
+
+###############################################
+# preparation
+###############################################
+# create a directory for outputs
+if (-d $prefix) {
+	print STDERR RED, "Warning: the directory $prefix exists.\n", RESET;
+} else {
+	`mkdir $prefix`;
+}
+
+# script path:
+my $scriptPath = $FindBin::Bin;
+my $utilsPath = $scriptPath."/utils/";
+
+
+&runreport("Start to run homostack");
+
+###############################################
+# check requirments
+###############################################
+&cmd_check("nucmer");
+&cmd_check("R");
+&cmd_check("realpath");
+&cmd_check("show-coords");
+
+&runreport("step 01: Requirement checked");
+
+###############################################
+# intermediate output
+###############################################
+my $data_list = $prefix."/".$prefix.".1.data.list";
+open(OUT, ">", $data_list) || die;
+print OUT "order\tnucmber\tref\trefbed\tqry\tqrybed\n";
+
+my $nucmer_prefix = $prefix."/".$prefix.".2.nucmer.";
+my $pdfout = $prefix."/".$prefix.".3.alnstack.pdf";
+
+###############################################
+# compare via nucmer
+###############################################
+for (my $i=0; $i<$#seq; $i++) {
+	my $current_seq = &re2abs($seq[$i]);
+	my $current_bed = &re2abs($annot[$i]);
+
+	my $next_seq = &re2abs($seq[$i + 1]);
+	my $next_bed = &re2abs($annot[$i + 1]);
+
+	my $delta_out = $nucmer_prefix.$i.".delta";
+	my $nucmer_show = $nucmer_prefix.$i.".txt";
+	`nucmer --mum --delta $delta_out --threads $threads $current_seq $next_seq`;
+	`echo -e "sstart\tsend\tqstart\tqend\tsmatch\tqmatch\tidentity\tslen\tqlen\tsubj\tqry" > $nucmer_show`;
+	`show-coords -HTl -I $identity -L $match $delta_out >> $nucmer_show`;
+
+	print OUT "$i\t$nucmer_show\t$current_seq\t$current_bed\t$next_seq\t$next_bed\n";
+}
+close OUT;
+
+&runreport("step 02: sequences aligned");
+
+###############################################
+# alignment plot
+###############################################
+my $stackplot_r = $utilsPath."/stackplot.R";
+
+`Rscript $stackplot_r $data_list $bandcol $pdfout`;
+
+&runreport("step 03: aligned plotted");
+
+###############################################
+# cleanup
+###############################################
+
+###############################################
+# module 1: check command availability
+###############################################
+sub cmd_check {
+	my $cmd = shift;
+	my $cmdPath=`which $cmd 2>/dev/null`;
+	if (!$cmdPath) {# not founded
+		print STDERR RED, "  $cmd is not found\n", RESET;
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	}
+}
+
+###############################################
+# module 2: report running result
+###############################################
+# funtion to report running return
+sub runreport {
+	my $injob = shift;
+    my $dateinfo = `date +'o %Y-%m-%d %H:%M:%S'`;
+	print STDERR MAGENTA, "$dateinfo", RESET;
+	print STDERR "  $injob.\n";
+	#print LOG "$dateinfo  ";    
+	#print LOG "  $injob.\n";
+}
+
+###############################################
+## module: convert relative path to absolute path
+###############################################
+sub re2abs {
+	my $inpath = shift;
+	my $outpath = `realpath $inpath`;
+	chomp $outpath;
+	return $outpath;
+}
+

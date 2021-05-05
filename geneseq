@@ -43,8 +43,8 @@ if (-d $prefix) {
 }
 
 # script path:
-#my $scriptPath = $FindBin::Bin;
-#my $utilsPath = $scriptPath."/utils/";
+my $scriptPath = $FindBin::Bin;
+my $utilsPath = $scriptPath."/utils/";
 
 &runreport("Start to run geneseq");
 
@@ -62,6 +62,7 @@ if (!-d $transcripts_dir) {
 my $adjpos_prefix = $transcripts_dir."/";
 
 my $gene_fas_out = $prefix."/".$prefix.".3.".$gene.".fasta";
+my $gene_len_out = $prefix."/".$prefix.".4.".$gene.".length";
 
 ##############################################
 #1	gramene	transcript	44289	49837	.	+	.	gene_id "Zm00001d027230"; transcript_id "Zm00001d027230_T001"; gene_source "gramene"; gene_biotype "protein_coding"; transcript_source "gramene"; transcript_biotype "protein_coding";
@@ -199,6 +200,9 @@ while (my $chunk = substr($gene_seq, 0, 80, "")) {
 	print GENEFAS "$chunk\n";
 }
 close GENEFAS;
+
+# fasta length
+`perl $utilsPath/fastaSize.pl $gene_fas_out > $gene_len_out`;
 
 &runreport("Gene sequence produced");
 
