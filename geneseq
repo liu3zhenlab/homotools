@@ -11,11 +11,12 @@ use Term::ANSIColor qw(:constants);
 use FindBin;
 use lib "$FindBin::Bin/lib";
 use genegtfadjust;
+use gffadjust;
 
 my $extension_5p = 0;
 my $extension_3p = 0;
 my $prefix = "GS";
-my ($fas, $gtf, $gene, $transcript, $help);
+my ($fas, $gtf, $gene, $transcript, @other_gff, $help);
 my $result = &GetOptions("fas|f=s"        => \$fas,
                          "gtf|i=s"        => \$gtf,
                          "gene|g=s"       => \$gene,
@@ -23,7 +24,8 @@ my $result = &GetOptions("fas|f=s"        => \$fas,
                          "ext3|x=i"       => \$extension_3p,
                          "transcript|t=s" => \$transcript,
                          "prefix|p=s"     => \$prefix,
-                         "help|h"         => \$help
+                         "othergff|o=s@"  => \@other_gff,
+						 "help|h"         => \$help
 );
 
 ### print help information if errors occur:
@@ -48,21 +50,35 @@ my $utilsPath = $scriptPath."/utils/";
 
 &runreport("Start to run geneseq");
 
+###############################################
+# check requirements
+###############################################
+&cmd_check("bedtools");
+
 ##############################################
 # intermediate output
 ###############################################
 my $ori_gtf_out = $prefix."/".$prefix.".1.".$gene.".original.gtf";
 open(ORIGTF, ">", $ori_gtf_out) || die;
 
+my $ori_bed_out = $prefix."/".$prefix.".1.".$gene.".original.bed";
+open(ORIBED, ">", $ori_bed_out) || die;
+
 my $transcripts_dir = $prefix."/".$prefix.".2.transcripts";
 if (!-d $transcripts_dir) {
 	`mkdir $transcripts_dir`;
 }
-#my $adjpos_prefix = $transcripts_dir."/".$gene;
+
 my $adjpos_prefix = $transcripts_dir."/";
 
 my $gene_fas_out = $prefix."/".$prefix.".3.".$gene.".fasta";
 my $gene_len_out = $prefix."/".$prefix.".4.".$gene.".length";
+
+# if other gff files are supplied
+my $other_gff_prefix = $prefix."/".$prefix.".5.others";
+if (@other_gff > 0 and !-d $other_gff_prefix) {
+	`mkdir $other_gff_prefix`;
+}
 
 ##############################################
 #1	gramene	transcript	44289	49837	.	+	.	gene_id "Zm00001d027230"; transcript_id "Zm00001d027230_T001"; gene_source "gramene"; gene_biotype "protein_coding"; transcript_source "gramene"; transcript_biotype "protein_coding";
@@ -103,8 +119,8 @@ while (<GTF>) {
 						$gene_start = $line[4];
 						$gene_end = $line[3];
 					} else {
-						$gene_start = &max($gene_start, $line[3]);
-						$gene_end = &min($gene_end, $line[4]);
+						$gene_start = &max($gene_start, $line[4]);
+						$gene_end = &min($gene_end, $line[3]);
 					}
 				}
 			} elsif ($gene_found) { # when gene name does not match input gene name
@@ -185,12 +201,17 @@ if (($gene_start > $seq_len) or ($gene_end > $seq_len)) {
 my $gene_seq;
 if ($gene_end > $gene_start) {
 	# strand +
-	$gene_seq = substr($chr_seq, $gene_start - 1, $gene_end - $gene_start + 1);
+	my $gene_start0 = $gene_start - 1;
+	$gene_seq = substr($chr_seq, $gene_start0, $gene_end - $gene_start + 1);
+	print ORIBED "$chromosome\t$gene_start0\t$gene_end\t$gene\t.\t\+\text5_$extension_5p\_ext3_$extension_3p\n";
 } else {
 	# strand -
-	$gene_seq = substr($chr_seq, $gene_end - 1, $gene_start - $gene_end + 1);
+	my $gene_start0 = $gene_end - 1;
+	$gene_seq = substr($chr_seq, $gene_start0, $gene_start - $gene_end + 1);
 	$gene_seq = &revcom($gene_seq);
+	print ORIBED "$chromosome\t$gene_start0\t$gene_start\t$gene\t.\t\-\text5\:$extension_5p\_ext3\:$extension_3p\n";
 }
+close ORIBED;
 
 open(GENEFAS, ">", $gene_fas_out) || die;
 #print GENEFAS ">$gene\($gene_strand\)\n";
@@ -205,6 +226,19 @@ close GENEFAS;
 `perl $utilsPath/fastaSize.pl $gene_fas_out > $gene_len_out`;
 
 &runreport("Gene sequence produced");
+
+###########################################
+# other GFFs
+###########################################
+if (@other_gff > 0) {
+	foreach my $other_gff (@other_gff) {
+		my $out_gff = $other_gff;
+		$out_gff =~ s/.*\//$gene\./g;
+		my $path2out_gff = $other_gff_prefix."/".$out_gff;
+		`bedtools intersect -a $other_gff -b $ori_bed_out > $path2out_gff`;
+		gffadjust::gffadjust($other_gff_prefix, $path2out_gff, $gene_start, $gene);
+	}
+}
 
 ###########################################
 # modules
@@ -239,6 +273,18 @@ sub max {
 	return $order_num[0];
 }
 
+###############################################
+## module 3: check command availability
+################################################
+sub cmd_check {
+	my $cmd = shift;
+	my $cmdPath=`which $cmd 2>/dev/null`;
+	if (!$cmdPath) {# not founded
+		print STDERR RED, "  $cmd is not found\n", RESET;
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	}   
+}
 
 ### Usage information
 sub errINF {

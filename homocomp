@@ -27,7 +27,7 @@ my $threads = 1;
 my $identity = 80;
 my $match = 100;
 my $coverage = 0;
-my $evalue = '1e-30';
+my $evalue = '1e-10';
 my $left_ext = 0;
 my $right_ext = 0;
 my $expand = 10;
@@ -78,8 +78,8 @@ my ($query, $db);
 
 &GetOptions(\%opts, "query=s", "qryadd=s", "db=s", "ref=s", "dbacc=s",
                     "strand=s", "tchr=s", "tstart=i", "tend=i", "tgtf=s",
-                    "identity=i", "match=i", "coverage=i", "repeatdust",
-                    "lext=i", "rext=i", "expand=i",
+                    "identity=i", "match=i", "coverage=i", "evalue=i",
+					"repeatdust", "lext=i", "rext=i", "expand=i",
                     "prefix=s", "threads=i", "bandcol=s",
                     "noblastn", "version", "help");
 
