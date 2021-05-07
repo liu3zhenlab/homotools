@@ -18,7 +18,7 @@ use lib "$FindBin::Bin/lib";
 use genegtfadjust;
 use maxbed;
 
-my $version = "0.1.8";
+my $version = "0.1.9";
 
 my $prefix = "homosnpeff";
 my $identity = 95;

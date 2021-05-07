@@ -10,7 +10,8 @@ package genegtfadjust;
 # input:
 # 1. gtf
 # 2. start site
-# 3. prefix
+# 3. outdir
+# 4. seqname
 #
 # output
 # 1. pos-adjusted gtf (one file per transcript)
@@ -21,7 +22,7 @@ sub genegtfadjust {
 	use strict;
 	use warnings;
 	my %transcripts;	
-	my ($genegtf, $start, $prefix, $seqname) = @_;
+	my ($genegtf, $start, $outdir, $seqname) = @_;
 	open(GENEGTF, "<", $genegtf) || die;
 	while (<GENEGTF>) {
 		chomp;
@@ -58,8 +59,8 @@ sub genegtfadjust {
 	my $cds_height = 0.05;
 	my $cds_color = "steelblue3";
 	foreach my $transcript (keys %transcripts) {
-		my $adj_gtf_out = $prefix.$transcript.".adjusted.gtf";
-		my $adj_bed_out = $prefix.$transcript.".adjusted.bed";
+		my $adj_gtf_out = $outdir."/".$transcript.".adjusted.gtf";
+		my $adj_bed_out = $outdir."/".$transcript.".adjusted.bed";
 
 		open(ADJGTF, ">", $adj_gtf_out) || die;
 		open(ADJBED, ">", $adj_bed_out) || die;
