@@ -7,16 +7,19 @@ use strict;
 use warnings;
 use Getopt::Long;
 use Term::ANSIColor qw(:constants);
-#use File::Temp;
 use FindBin;
 use lib "$FindBin::Bin/lib";
 use genegtfadjust;
 use gffadjust;
+use seqhighlight;
+
+my $version = "0.1.8";
 
 my $extension_5p = 0;
 my $extension_3p = 0;
-my $prefix = "GS";
+my $prefix = "geneseq";
 my ($fas, $gtf, $gene, $transcript, @other_gff, $help);
+my ($cds_file, $cdna_file, $protein_file, $version_request);
 my $result = &GetOptions("fas|f=s"        => \$fas,
                          "gtf|i=s"        => \$gtf,
                          "gene|g=s"       => \$gene,
@@ -24,9 +27,18 @@ my $result = &GetOptions("fas|f=s"        => \$fas,
                          "ext3|x=i"       => \$extension_3p,
                          "transcript|t=s" => \$transcript,
                          "prefix|p=s"     => \$prefix,
-                         "othergff|o=s@"  => \@other_gff,
+                         "cds|c=s"        => \$cds_file,
+						 "cdna|d=s"       => \$cdna_file,
+						 "protein|a=s"    => \$protein_file,
+						 "othergff|o=s@"  => \@other_gff,
+						 "version|v"      => \$version_request,
 						 "help|h"         => \$help
 );
+
+if ($version_request) {
+	print "$version\n";
+	exit;
+}
 
 ### print help information if errors occur:
 if ($help or !defined $fas or !defined $gtf or !defined $gene) {
@@ -38,11 +50,7 @@ if ($help or !defined $fas or !defined $gtf or !defined $gene) {
 ## preparation
 ################################################
 # create a directory for outputs
-if (-d $prefix) {
-	print STDERR RED, "Warning: the directory $prefix exists.\n", RESET;
-} else {
-	`mkdir $prefix`;
-}
+&create_dir($prefix);
 
 # script path:
 my $scriptPath = $FindBin::Bin;
@@ -54,6 +62,7 @@ my $utilsPath = $scriptPath."/utils/";
 # check requirements
 ###############################################
 &cmd_check("bedtools");
+&runreport("requirments checked");
 
 ##############################################
 # intermediate output
@@ -65,19 +74,27 @@ my $ori_bed_out = $prefix."/".$prefix.".1.".$gene.".original.bed";
 open(ORIBED, ">", $ori_bed_out) || die;
 
 my $transcripts_dir = $prefix."/".$prefix.".2.transcripts";
-if (!-d $transcripts_dir) {
-	`mkdir $transcripts_dir`;
-}
+&create_dir($transcripts_dir);
 
 my $adjpos_prefix = $transcripts_dir."/";
 
 my $gene_fas_out = $prefix."/".$prefix.".3.".$gene.".fasta";
 my $gene_len_out = $prefix."/".$prefix.".4.".$gene.".length";
 
+# sequnence with exon/cds highlighted
+my $seqhighlight_dir = $prefix."/".$prefix.".5.highlighted";
+&create_dir($seqhighlight_dir);
+
 # if other gff files are supplied
-my $other_gff_prefix = $prefix."/".$prefix.".5.others";
-if (@other_gff > 0 and !-d $other_gff_prefix) {
-	`mkdir $other_gff_prefix`;
+my $other_gff_dir = $prefix."/".$prefix.".6.others";
+if (@other_gff > 0) {
+	&create_dir($other_gff_dir);
+}
+
+# cds, cdna, protein
+my $cds_cdna_prot_dir = $prefix."/".$prefix.".7.cds.cdna.prot";
+if (defined $cds_file or defined $cdna_file or defined $protein_file) {
+	&create_dir($cds_cdna_prot_dir);
 }
 
 ##############################################
@@ -227,6 +244,21 @@ close GENEFAS;
 
 &runreport("Gene sequence produced");
 
+############################################
+# output sequences with exon/cds highlighted
+###########################################
+my $all_adjusted_bed = `ls -1 $transcripts_dir/*bed`;
+my @all_adjusted_bed = split("\n", $all_adjusted_bed);
+foreach my $each_abed (@all_adjusted_bed) {
+	my $each_fas_out = $each_abed;
+	$each_fas_out =~ s/.*\///g;
+	$each_fas_out =~ s/\.adjusted\.bed//g;
+	my $transcript_name = $each_fas_out;
+	my $highlighed_fas_out = $seqhighlight_dir."/".$transcript_name.".highlighted.fasta";
+	seqhighlight::seqhighlight($gene_fas_out, $each_abed, $highlighed_fas_out, $transcript_name);
+}
+&runreport("sequences with exon/cds highlighted generated");
+
 ###########################################
 # other GFFs
 ###########################################
@@ -234,10 +266,35 @@ if (@other_gff > 0) {
 	foreach my $other_gff (@other_gff) {
 		my $out_gff = $other_gff;
 		$out_gff =~ s/.*\//$gene\./g;
-		my $path2out_gff = $other_gff_prefix."/".$out_gff;
+		my $path2out_gff = $other_gff_dir."/".$out_gff;
 		`bedtools intersect -a $other_gff -b $ori_bed_out > $path2out_gff`;
-		gffadjust::gffadjust($other_gff_prefix, $path2out_gff, $gene_start, $gene);
+		gffadjust::gffadjust($other_gff_dir, $path2out_gff, $gene_start, $gene);
 	}
+	&runreport("Other GFF produced");
+}
+
+###########################################
+# other transcript or protein sequences
+###########################################
+# cds
+if (defined $cds_file) {
+	my $cds_out_file = $cds_cdna_prot_dir."/".$gene.".cds.fasta";
+	&seqextract($cds_file, $gene, $cds_out_file);
+	&runreport("cds sequences extracted");
+}
+
+# cdna
+if (defined $cdna_file) {
+	my $cdna_out_file = $cds_cdna_prot_dir."/".$gene.".cdna.fasta";
+	&seqextract($cdna_file, $gene, $cdna_out_file);
+	&runreport("cdna/trancript sequences extracted");
+}
+
+# protein
+if (defined $protein_file) {
+	my $protein_out_file = $cds_cdna_prot_dir."/".$gene.".protein.fasta";
+	&seqextract($protein_file, $gene, $protein_out_file);
+	&runreport("protein sequences extracted");
 }
 
 ###########################################
@@ -273,9 +330,7 @@ sub max {
 	return $order_num[0];
 }
 
-###############################################
-## module 3: check command availability
-################################################
+### check command availability
 sub cmd_check {
 	my $cmd = shift;
 	my $cmdPath=`which $cmd 2>/dev/null`;
@@ -285,6 +340,53 @@ sub cmd_check {
 		exit;
 	}   
 }
+
+sub create_dir {
+# create a directory
+	my $dir_to_create = shift;
+	if (-d $dir_to_create) {
+		print STDERR RED, "Warning: the directory $dir_to_create exists.\n", RESET;
+	} else {
+		`mkdir $dir_to_create`;
+	}
+}
+
+sub seqextract {
+# extract sequences based on sequence names and print them
+	my ($infas, $ingene, $outfas) = @_;
+	my (%inseq, $inseq, $inseq_name, $hitseq);
+	open(OUTFAS, ">", $outfas) || die;
+	open(INFAS, "<", $infas) || die;
+	while (<INFAS>) {
+		chomp;
+		if (/^>(\S+)/) {
+			if (defined $inseq_name) {
+				if ($inseq_name =~ $ingene) {
+					$hitseq = $inseq;
+					print OUTFAS ">$inseq_name\n";
+					while (my $chunk = substr($hitseq, 0, 80, "")) {
+						print OUTFAS "$chunk\n";
+					}
+				}
+			}
+			$inseq_name = $1;
+			$inseq = '';
+		} else {
+			$inseq .= $_;
+		}
+	}
+	# last sequence:
+	if ($inseq_name =~ $ingene) {
+		$hitseq = $inseq;
+		print OUTFAS ">$inseq_name\n";
+		while (my $chunk = substr($hitseq, 0, 80, "")) {
+			print OUTFAS "$chunk\n";
+		}
+	}
+	close INFAS;
+	close OUTFAS;
+}
+
 
 ### Usage information
 sub errINF {
@@ -298,6 +400,11 @@ Usage: geneseq --fas <fasta> [--feature <str> or --list <file>]
   --gtf <file>       : GTF file (required)
   --ext5 <num>       : bp extension from 5' site ($extension_5p)
   --ext3 <num>       : bp extension from 3' site ($extension_3p)
+  --othergff <file>  : other GFF files containing other features (optional)
+                       Note: multiple GFFs can be input by reusing --othergff
+  --cds <file>       : a fasta file containing coding sequences of the gene (optional)
+  --cdna <file>      : a fasta file containing transcript sequences of the gene (optional)
+  --protein <file>   : a fasta file containing protin sequences of the gene (optional)
   --transcript <str> : transcript (optional)
   --prefix <str>     : prefix name for outputs ($prefix)
   --help             : help information

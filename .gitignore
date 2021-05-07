@@ -2,3 +2,4 @@ dev
 case
 hpout
 oldversion
+version_replace.sh

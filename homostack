@@ -19,7 +19,7 @@ use lib "$FindBin::Bin/lib";
 use genegtfadjust;
 use maxbed;
 
-my $version = "0.1.6";
+my $version = "0.1.8";
 
 my $identity = 80; 
 my $match = 100;
