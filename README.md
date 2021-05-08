@@ -150,3 +150,12 @@ Usage: homostack --query <fasta> --db <blast_db> [options]
 Plot of sequential alignments of multiple sequences : <prefix>.3.alnstack.pdf
 ```
 
+## Bug report
+
+Please report any bugs or suggestion on github or by email to Sanzhen Liu ([liu3zhen@ksu.edu](mailto:liu3zhen@ksu.edu)).
+
+## License
+
+CGRD is distributed under MIT licence.
+
+### 
