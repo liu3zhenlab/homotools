@@ -32,8 +32,12 @@ Basically, the installation is just to copy all homotools files in a directory. 
 
 ```
 git clone https://github.com/liu3zhenlab/homotools.git 
-perl ./homotools/geneseq
+perl ./homotools/homocomp
+# test run
+cd data
+sh homocomp_testrun.sh
 ```
+The output directory "out" will be prodcued with many PDF plots and other outputs.  
 
 ## geneseq
 
