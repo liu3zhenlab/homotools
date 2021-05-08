@@ -389,18 +389,18 @@ Usage: geneseq --fas <fasta> --gene <genename> --gtf <GTF> [options]
 - produce a new gtf with adjusted positions relative to gene fasta
 - also can extract other features, cds, cdna, protein sequences of the genes
 [Options]
-  --fas|f <file>     : reference fasta file (required)
-  --gene <str>       : gene name (required)
-  --gtf <file>       : GTF file (required)
-  --prefix <str>     : prefix name for outputs ($prefix)
-  --ext5 <num>       : bp extension from 5' site ($extension_5p)
-  --ext3 <num>       : bp extension from 3' site ($extension_3p)
-  --othergff <file>  : other GTF/GFF files containing other features (optional)
-                       Note: multiple GTF/GFFs can be input by reusing --othergff
-  --cds <file>       : a fasta file containing coding sequences of the gene (optional)
-  --cdna <file>      : a fasta file containing transcript sequences of the gene (optional)
-  --protein <file>   : a fasta file containing protin sequences of the gene (optional)
-  --help             : help information
+  --fas|f <file>      : reference fasta file (required)
+  --gene|i <str>      : gene name (required)
+  --gtf|g <file>      : GTF file (required)
+  --prefix|p <str>    : prefix name for outputs ($prefix)
+  --ext5|e <num>      : bp extension from 5' site ($extension_5p)
+  --ext3|x <num>      : bp extension from 3' site ($extension_3p)
+  --othergff|o <file> : other GTF/GFF files containing other features (optional)
+                        Note: multiple GTF/GFFs can be input by reusing --othergff
+  --cds|c <file>      : a fasta file containing coding sequences of the gene (optional)
+  --cdna|d <file>     : a fasta file containing transcript sequences of the gene (optional)
+  --protein|a <file>  : a fasta file containing protin sequences of the gene (optional)
+  --help|h            : help information
 EOF
 	exit;
 }
