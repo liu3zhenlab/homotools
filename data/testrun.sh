@@ -1,3 +1,3 @@
 #!/bin/bash
-../homoplot --query query.fas --db db/ref
+perl ../homocomp --query query.fas --db db/ref
 
