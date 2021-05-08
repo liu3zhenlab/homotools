@@ -1,0 +1,2 @@
+qstart	qend	sstart	send	qmatch	smatch	identity	qlen	slen	qry	subj
+1	672	1	672	672	672	100.00	672	672	gene	db_gene:1-672(+)
