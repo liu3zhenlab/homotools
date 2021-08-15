@@ -1,6 +1,6 @@
 # homotools
 
-## What does homotools can do?
+## What can homotools do?
 
 The package is dedicated to structurally compare sequences of homologous genes from different genomes of a species. Briefly, the package has been developed to perform the following analyses.
 
