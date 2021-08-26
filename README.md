@@ -160,6 +160,6 @@ Please report any bugs or suggestion on github or by email to Sanzhen Liu ([liu3
 
 ## License
 
-CGRD is distributed under MIT licence.
+The package homotools is distributed under MIT licence.
 
 ### 
