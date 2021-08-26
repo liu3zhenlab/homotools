@@ -1,5 +1,7 @@
 dev
 case
 hpout
+homovg_dev
+homomg_dev
 oldversion
 version_replace.sh

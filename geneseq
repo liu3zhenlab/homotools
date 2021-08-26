@@ -143,6 +143,14 @@ while (<GTF>) {
 close GTF;
 close ORIGTF;
 
+# if the gene is not found, quit
+if (!$gene_found) {
+	&runreport("Gene was NOT found in GTF");
+	print STDERR RED, "Exit\n", RESET;
+	exit;
+}
+
+
 # output adjusted GTF and BED
 if ($gene_strand eq "+") {
 	$gene_start -= $extension_5p;
@@ -152,15 +160,9 @@ if ($gene_strand eq "+") {
 	$gene_end -= $extension_3p;
 }
 
-if (!$gene_found) {
-	&runreport("Gene are NOT found in GTF");
-	print STDERR RED, "Exit\n", RESET;
-	exit;
-} else {
-	# adjust position to a newly defined start for gene information in a GTF
-	# and output a position-adjusted GTF and BED file for each transcript
-	genegtfadjust::genegtfadjust($ori_gtf_out, $gene_start, $transcripts_dir, $gene);
-}
+# adjust position to a newly defined start for gene information in a GTF
+# and output a position-adjusted GTF and BED file for each transcript
+&genegtfadjust::genegtfadjust($ori_gtf_out, $gene_start, $transcripts_dir, $gene);
 
 ###########################################
 ### chromosome sequence

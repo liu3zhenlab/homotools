@@ -216,8 +216,6 @@ for (i in 1:num_aln) {
   slen <- aln_info$slen
   qry <- aln_info$qry
   qlen <- aln_info$qlen
-  identity_high <- aln_info$identity_high
-  identity_low <- aln_info$identity_low
   
   # subj highlights
   if (i == 1) {
@@ -232,6 +230,7 @@ for (i in 1:num_aln) {
   rect(0, upper_ycenter - upper_half_height, qlen, upper_ycenter + upper_half_height,
        col="gray70", border="gray70")
   upper_half_height <- highlight_module(bedfile=qry_bed, center=upper_ycenter)
+  
   # connections
   for (j in 1:nrow(aln)) {
     band_gradient_col <- allcols[which.min(abs(identity20 - aln[j, "identity"]))]
@@ -269,15 +268,19 @@ barlen <- xmax / 4
 barstep <- barlen / color_num
 barheight <-  block_top / 25
 text(xmax - barlen/2, bar_ypos, labels = "identity", cex=0.8, pos=1, xpd=T)  ### plot LD name
-barlabels <- c(identity_low, identity_high)
+
+# lowest identity
+barlabels <- c(identity_min, identity_max)
 barlabels.num <- floor(barlabels * color_num)
-identity_low <- round(identity_low, 1)
-text(xmax-barlen, bar_ypos+0.01, labels=identity_low, cex=0.7, pos=1)  ### plot low identity
-identity_high <- round(identity_high, 1)
-if (identity_high == 100) {
-  identity_high <- round(identity_high, 0)
+identity_min <- round(identity_min, 1)
+text(xmax-barlen, bar_ypos+0.01, labels=identity_min, cex=0.7, pos=1)  ### plot low identity
+
+# highest identity
+identity_max <- round(identity_max, 1)
+if (identity_max == 100) {
+  identity_max <- round(identity_max, 0)
 }
-text(xmax, bar_ypos+0.01, labels=identity_high, cex=0.7, pos=1)  ### plot low identity
+text(xmax, bar_ypos+0.01, labels=identity_max, cex=0.7, pos=1)  ### plot high identity
 
 # color bars for identity legends
 col_barpos <- xmax-barlen
@@ -289,5 +292,4 @@ for (i in 1:color_num) {
 }
 
 # close
-dev.off()
-
+dev.off() 
