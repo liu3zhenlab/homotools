@@ -225,12 +225,15 @@ nucmerplot <- function(datafile, band_col="deepskyblue4", outpath=".", imageoutf
   text(x= -max.xsize / 50, y=lower_ycenter - lower_adj - 0.055,
        labels=ylabels, cex=0.8, xpd=T, pos=4)
 
-  #homo2A188/homo2A188.4c.target.posadj.annotation/Zm00001d042944_T001.adjusted.bed
+  # homo2A188/homo2A188.4c.target.posadj.annotation/Zm00001d042944_T001.adjusted.bed
+  # if not ended with adjusted.bed, no labels are printed.
   if (target_highlight_bed != "empty") {
-  	transcript <- gsub(".*\\/", "", target_highlight_bed)
-	transcript <- gsub(".adjusted.bed", "", transcript);
-	text(x= max.xsize / 2, y=lower_ycenter + lower_adj,
-	    labels=transcript, cex=0.8, xpd=T, pos=3)
+    if (grepl("adjusted.bed$", target_highlight_bed)) {
+  		transcript <- gsub(".*\\/", "", target_highlight_bed)
+		transcript <- gsub(".adjusted.bed", "", transcript);
+		text(x= max.xsize / 2, y=lower_ycenter + lower_adj,
+	    	labels=transcript, cex=0.8, xpd=T, pos=3)
+	}
   }
 
   ### identity legends

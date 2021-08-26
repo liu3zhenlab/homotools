@@ -39,7 +39,7 @@ sub prompt {
     [Options]
     --query <file>   fasta file containing a sequence as the query; required
     --qryadd <file>  bed file to highlight regions in query; optional 
-    [format]:chr start(0-based) end(1-based) label color(R compatible) height(0.01-0.1)
+    [format]:chr start(0-based) end(1-based) label	height(0.01-0.1) strand(+/-)	color(R compatible)
     --db <db_name>   blast database; required
     --dbacc <str>    accession name of reference database; optional
     --ref <file>     fasta file of the reference; optional
@@ -50,7 +50,9 @@ sub prompt {
     --tend <num>     bp position for the region end; optional
                      if specified, the value will be used as the right end
     --tgtf <file>    the gene annotation GTF file of the target; optional
-    --strand <str>   plus (or +) or minus (or -) ($strand)
+    --tgtf_all       if specified, all genes on the target are highlighted.
+                     by default, only the one with maxium alignment hits is highlighted.
+	--strand <str>   plus (or +) or minus (or -) ($strand)
     --evalue <str>   maximal E-value ($evalue)
     --identity <num> minimal percentage of identity from 0 to 100 ($identity)
     --match <num>    minimal bp match of an alignment ($match)
@@ -77,7 +79,8 @@ my %opts = ();
 my ($query, $db);
 
 &GetOptions(\%opts, "query=s", "qryadd=s", "db=s", "ref=s", "dbacc=s",
-                    "strand=s", "tchr=s", "tstart=i", "tend=i", "tgtf=s",
+                    "strand=s", "tchr=s", "tstart=i", "tend=i",
+					"tgtf=s", "tgtf_all",
                     "identity=i", "match=i", "coverage=i", "evalue=i",
 					"repeatdust", "lext=i", "rext=i", "expand=i",
                     "prefix=s", "threads=i", "bandcol=s",
@@ -199,6 +202,7 @@ my $target_fas = $prefix."/".$prefix.".4.target.fas";
 # target GTF and BED output prefix (only output if --tgtf is specified)
 my $target_adjust_gtf_prefix;
 my $target_annotation_gtf;
+my $target_annotation_bed;
 if (defined $target_gtf) {
 	$target_annotation_gtf = $prefix."/".$prefix.".4b.target.raw.annotation.gtf";
 	my $target_annotation_dir = $prefix."/".$prefix.".4c.target.posadj.annotation";	
@@ -206,6 +210,10 @@ if (defined $target_gtf) {
 		`mkdir $target_annotation_dir`;
 	}
 	$target_adjust_gtf_prefix = $target_annotation_dir."/";
+
+	if (exists $opts{tgtf_all}) {
+		$target_annotation_bed = $prefix."/".$prefix.".4d.target.add.bed";
+	}
 }
 
 # nucmer output
@@ -436,8 +444,13 @@ if (defined $target_gtf) {
 		$target_add = "empty";
 		&runreport("step 07c: no target annotation files founded");
 	} else {
-		$target_add = maxbed::maxbed($bedfiles);
-		&runreport("step 07c: A BED file was selected: $target_add");
+		if (exists $opts{tgtf_all}) {
+			$target_add = $target_annotation_bed; 
+			`cat $target_adjust_gtf_prefix*bed | sort -k4r,4 -k2n,2 > $target_add`;
+		} else {
+			$target_add = maxbed::maxbed($bedfiles);
+			&runreport("step 07c: A BED file was selected: $target_add");
+		}
 	}
 }
 
