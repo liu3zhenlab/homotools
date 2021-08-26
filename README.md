@@ -1,16 +1,16 @@
 # homotools
 
-## What does homotools can do?
+## What can homotools do?
 
 The package is dedicated to structurally compare sequences of homologous genes from different genomes of a species. Briefly, the package has been developed to perform the following analyses.
 
 1. From an annotated genome, the gene sequence and the related gene information can be extracted. The related information including gene annotation, other featured data in GTF/GFF and BED format, transcribed sequences, protein sequences, and gene sequences with trancribed sequences highlighted. The positions of gene annotation and other features are adjusted to the coordinates relative to the newly extracted sequences. The script **geneseq** deploys this procedure.
-2. With a query gene sequence, homologous sequences can be identified in a genome. The homologous gene could be found if a related GTF is supplied. The alignment between two homologous regions are plotted. The script **homocomp** implements homologous searching and visualization.
+2. With a query gene sequence, homologous sequences can be identified in a genome. The homologous gene could be found if a related GTF is supplied. The alignment between two homologous regions are plotted. The script **homocomp** implements homologous searching and visualization of the comparison.
 3. With multiple homologous sequences, sequential alignments can be visualized, which is implemented in the script **homostack**.
 
 ## Motivation
 
-The development of **homotools** was motivated for simplifying the tedious procedure for extracting sequences and related information of a gene from a reference genome and homologous genes from other genomes. Unix shell scripts, Perl, and R were combined for the development.
+The development of **homotools** was motivated by the tedious procedure for extracting sequences and related information of a gene from a reference genome and homologous genes from other genomes. Unix shell scripts, Perl, and R were combined for the development.
 
 ## Requirements and installation
 
@@ -28,7 +28,7 @@ conda install -c bioconda blast mummer bedtools
 
 #### download homotools and run scripts
 
-Basically, the installation is just to copy all homotools files in a directory. Scripts can be directly used afterwards.
+Basically, the installation of homotools is just to copy all homotools files in a directory. Scripts can be directly used afterwards.
 
 ```
 git clone https://github.com/liu3zhenlab/homotools.git 
