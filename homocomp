@@ -39,7 +39,8 @@ sub prompt {
     [Options]
     --query <file>   fasta file containing a sequence as the query; required
     --qryadd <file>  bed file to highlight regions in query; optional 
-    [format]:chr start(0-based) end(1-based) label	height(0.01-0.1) strand(+/-)	color(R compatible)
+        [format, 7 columns separated by Tab]:
+        chr start(0-based) end(1-based) label height(0.01-0.1) strand(+/-) color(R compatible)
     --db <db_name>   blast database; required
     --dbacc <str>    accession name of reference database; optional
     --ref <file>     fasta file of the reference; optional
@@ -50,8 +51,8 @@ sub prompt {
     --tend <num>     bp position for the region end; optional
                      if specified, the value will be used as the right end
     --tgtf <file>    the gene annotation GTF file of the target; optional
-    --tgtf_all       if specified, all genes on the target are highlighted.
-                     by default, only the one with maxium alignment hits is highlighted.
+    --tgtf_all       if specified, all genes on the target region are highlighted with no text labels;
+                     by default, only the one with the longest alignment is highlighted and with a text label.
 	--strand <str>   plus (or +) or minus (or -) ($strand)
     --evalue <str>   maximal E-value ($evalue)
     --identity <num> minimal percentage of identity from 0 to 100 ($identity)
