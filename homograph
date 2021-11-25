@@ -18,11 +18,11 @@ use lib "$FindBin::Bin/lib";
 #use genegtfadjust;
 #use maxbed;
 
-my $version = "0.1.9";
+my $version = "0.2.1";
 
 my $prefix = "hgout";
 my $threads = 1;
-my $minigraph_para ="-xggs -t1 -j 0.2 -l 1000";
+my $minigraph_para ="-xggs -t1 -j 0.2 -l 100";
 
 my $main_label = "haplotype graph";
 my $refgap_prop = 0.02;
@@ -44,7 +44,7 @@ sub prompt {
     --main_label <float>     label to add as the title of haplotype plotting figure ($main_label)
     --refgap_prop <float>    ratio of each gap between segments to the canvas x length ($refgap_prop)
     --nonrefgap_prop <float> ratio of each gap between segments to the canvas x length ($nonrefgap_prop)
-    --maxseg_prop <float>    ratio of each gap between segments to the canvas x length ($maxseg_prop)
+    --maxseg_prop <float>    proprotion of the maxium fragment that will not be shortened segments to the canvas x length ($maxseg_prop)
     --version         version information
     --help:           help information
 EOF
