@@ -23,7 +23,8 @@ my $version = "0.2.2";
 my $prefix = "hgout";
 my $threads = 1;
 my $minigraph_para ="-xggs -t1 -j 0.2 -l 100";
-
+my $cdhit_para = "-g 1 -s 0.8 -c 0.8 -r 0";
+my $pggb_para_p_s = "-p 90 -s 1000";
 my $main_label = "haplotype graph";
 my $refgap_prop = 0.02;
 my $nonrefgap_prop = 0.05;
@@ -38,6 +39,8 @@ sub prompt {
     --dir <path>      path to a collection of fasta files with suffix of .fa, .fas, or .fasta; required
     --ref <file>      fasta file of the reference sequence; required
     --mgpara <str>    minigraph parameters ($minigraph_para)
+    --cdhitpara <str> parameters for cd-hit-est ($cdhit_para)
+    --pggbpara <str>  parameters for -p and -s in pggb ($pggb_para_p_s)
     --gene_gtf <file> gtf file of gene structure using coordinates on --ref; optional
     --threads <num>   number of threads ($threads)
     --prefix <str>    prefix of outputs ($prefix)
@@ -60,7 +63,8 @@ my ($query, $db);
 &GetOptions(\%opts, "dir=s", "ref=s", "mgpara=s", "gene_gtf=s",
                     "threads=i", "prefix=s", "main_label=s",
 					"refgap_prop=f", "nonrefgap_prop=f", "maxseg_prop=f",
-                    "version", "help");
+                    "cdhitpara=s", "pggbpara=s",
+					"version", "help");
 
 if (exists $opts{version}) {
 	print "$version\n";
@@ -149,6 +153,8 @@ my $plot_pdf = $prefix."/".$prefix.".2.minigraph.pdf";
 # cd-hit output prefix
 my $cdhit_infasta = $prefix."/".$prefix.".3.cdhit.in.fasta";
 my $cdhit_out = $prefix."/".$prefix.".3.cdhit.out";
+#my $cdhit_out_ncluster = $cdhit_out.".ncluster";
+#my $cdhit_out_fasta = $cdhit_out.".fasta";
 
 # pggb output
 my $pggb_infile = $prefix.".4.pggb.in.fasta";
@@ -193,11 +199,13 @@ my $gfashow_r = $utilsPath."/gfashow.R";
 &runreport("step 03: run cd-hit to determine order of sequences");
 
 `cat $fasta_files $ref > $cdhit_infasta`;
-my $cdhit_para = "-g 1 -s 0.8 -c 0.8 -r 0";
+#my $cdhit_para = "-g 1 -s 0.8 -c 0.8 -r 0";
 `cd-hit-est -i $cdhit_infasta -o $cdhit_out $cdhit_para`;
 
 # modify sequence names for pggb
-`perl $utilsPath/cdhit2pggb.pl --fasta $cdhit_infasta --clust $cdhit_out.clstr >$pggb_infasta`;
+`perl $utilsPath/cdhit2pggb.pl --fasta $cdhit_infasta --clust $cdhit_out.clstr > $pggb_infasta`;
+my $ncluster = `grep "^>Cluster" -c $cdhit_out.clstr`;
+chomp $ncluster;
 
 ###############################################
 # pggb
@@ -209,7 +217,7 @@ my $cdhit_para = "-g 1 -s 0.8 -c 0.8 -r 0";
 `samtools faidx $pggb_infasta`;
 
 # pggb
-my $pggb_para = "-p 90 -s 1000 -n 5 -U -v -L";
+my $pggb_para = $pggb_para_p_s." -n $ncluster -U -v -L";
 `pggb -i $pggb_infasta -o $pggb_out $pggb_para`;
 `cp $pggb_out/$pggb_infile*viz_inv.png $prefix/$pggb_infile.alignments.png`;
 `cp $pggb_out/$pggb_infile*lay.draw_mqc.png $prefix/$pggb_infile.gfa.layplot.png`;

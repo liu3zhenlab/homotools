@@ -13,15 +13,17 @@ use warnings;
 use Getopt::Long;
 
 my $gene = "seq"; 
+my $prefix = "postcdhit";
 
 sub prompt {
     print <<EOF;
     Usage: perl $0 --fasta <fasta> --clust <cd-hit cluster> [options]
     [Options]
     --fasta <file>  fasta file containing all sequence in cd-hit clusters; required
-	--clust <file>  cluster output from cd-hit-est; required
-	--gene <str>    gene name (seq)
-	--help          help information
+    --clust <file>  cluster output from cd-hit-est; required
+    --prefix <str>  output prefix ($prefix)
+    --gene <str>    gene name ($gene)
+    --help          help information
 EOF
 exit;
 }
@@ -32,7 +34,7 @@ exit;
 my (@fasta, $cluster);
 
 my %opts = ();
-&GetOptions(\%opts, "fasta=s@", "clust=s",
+&GetOptions(\%opts, "fasta=s@", "clust=s", "prefix",
                     "gene=s", "help");
 
 &prompt if exists $opts{help} or !%opts;
@@ -46,6 +48,7 @@ if (!exists $opts{fasta} or !exists $opts{clust}) {
 }
 
 $gene = $opts{gene} if exists $opts{gene};
+$prefix = $opts{prefix} if exists $opts{prefix};
 
 ###############################################
 # fasta sequence
@@ -70,6 +73,17 @@ foreach my $efasta (@fasta) {
 }
 
 ###############################################
+# output files
+###############################################
+#my $ncluster_out = $prefix.".cdhit.ncluster";
+#my $seqlist_out = $prefix."cdhit.seqlist";
+#my $seq_out = $prefix.".cdhit.fasta";
+
+#open(NCLUSTER, ">", $ncluster_out) || die;
+#open(SEQLIST, ">", $seqlist_out) || die;
+#open(SEQ, ">", $seq_out) || die;
+
+###############################################
 # cd-hit cluster
 ###############################################
 #>Cluster 0
@@ -77,19 +91,21 @@ foreach my $efasta (@fasta) {
 #>Cluster 1
 #0	30804nt, >CML103... at +/89.42%
 #1	30891nt, >CML277... at +/96.62%
-#
+
+my $ncluster = 0;
 my (%cluster, $cluster_id, $seqname);
 open(CLUSTER, $cluster) || die;
 while (<CLUSTER>) {
 	chomp;
 	if (/^>Cluster (\d+)/) {
+		$ncluster++;
 		$cluster_id = $1;
 	} elsif (/>([^\.]+)\./) {
 		$seqname = $1;
 		if (exists $fasta_seq{$seqname}) {
 			print ">$seqname\#cluster$cluster_id\#$gene\n";
-			print "$fasta_seq{$seqname}\n";
-			#&format_print($fasta_seq{$seqname}, 80);
+			#print "$fasta_seq{$seqname}\n";
+			&format_print($fasta_seq{$seqname}, 80);
 		} else {
 			print STDERR "$seqname does not exist in fasta input\n";
 		}
@@ -99,6 +115,11 @@ while (<CLUSTER>) {
 	}
 }
 close CLUSTER;
+
+#print NCLUSTER "$ncluster\n";
+#close NCLUSTER;
+#close SEQLIST;
+#close SEQ;
 
 ###############################################
 ### function for formatted output:
