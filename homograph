@@ -18,7 +18,7 @@ use lib "$FindBin::Bin/lib";
 #use genegtfadjust;
 #use maxbed;
 
-my $version = "0.2.1";
+my $version = "0.2.2";
 
 my $prefix = "hgout";
 my $threads = 1;
@@ -107,11 +107,25 @@ my $gene_gtf = "NULL";
 $gene_gtf = $opts{gene_gtf} if exists $opts{gene_gtf};
 
 ###############################################
+# check requirments
+###############################################
+&cmd_check("minigraph");
+&cmd_check("Rscript");
+&cmd_check("sed");
+&cmd_check("awk");
+&cmd_check("minigraph");
+&cmd_check("cd-hit-est");
+&cmd_check("pggb");
+
+&runreport("Requirement checked");
+
+###############################################
 # preparation
 ###############################################
 # create a directory for outputs
 if (-d $prefix) {
 	print STDERR RED, "Warning: the directory $prefix exists.\n", RESET;
+	#`rm -rf $prefix`;
 } else {
 	`mkdir $prefix`;
 }
@@ -121,18 +135,7 @@ my $scriptPath = $FindBin::Bin;
 my $utilsPath = $scriptPath."/utils/";
 
 
-&runreport("Start to run homograph");
-
-###############################################
-# check requirments
-###############################################
-&cmd_check("minigraph");
-&cmd_check("Rscript");
-&cmd_check("sed");
-&cmd_check("awk");
-&cmd_check("minigraph");
-
-&runreport("step 01: Requirement checked");
+&runreport("step 01: prepare to run homograph");
 
 ###############################################
 # intermediate output
@@ -141,13 +144,23 @@ my $utilsPath = $scriptPath."/utils/";
 my $gfa_outfile = $prefix."/".$prefix.".1.gfa";
 
 # PDF plotting
-my $plot_pdf = $prefix.".pdf";
+my $plot_pdf = $prefix."/".$prefix.".2.minigraph.pdf";
 
+# cd-hit output prefix
+my $cdhit_infasta = $prefix."/".$prefix.".3.cdhit.in.fasta";
+my $cdhit_out = $prefix."/".$prefix.".3.cdhit.out";
 
+# pggb output
+my $pggb_infile = $prefix.".4.pggb.in.fasta";
+my $pggb_infasta = $prefix."/".$pggb_infile;
+my $pggb_out = $prefix."/".$prefix.".4.pggb.out";
 
 ###############################################
 # minigraph to gfa
 ###############################################
+
+&runreport("step 02: run minigraph and plot");
+
 `minigraph $minigraph_para $ref $fasta_files >$gfa_outfile 2>/dev/null`;
 
 if (-f $gfa_outfile) {
@@ -162,7 +175,7 @@ if (-f $gfa_outfile) {
 	exit;
 }
 ###############################################
-# gfa plotting
+# my gfa plotting
 ###############################################
 my $gfashow_r = $utilsPath."/gfashow.R";
 #print "$gfa_outfile\n";
@@ -174,22 +187,38 @@ my $gfashow_r = $utilsPath."/gfashow.R";
 `Rscript $gfashow_r $gfa_outfile $refgap_prop $nonrefgap_prop $maxseg_prop "$main_label" $gene_gtf $plot_pdf`;
 
 ###############################################
-# individual haplotype figures
+# cd-hit haplotypes
 ###############################################
 
+&runreport("step 03: run cd-hit to determine order of sequences");
 
+`cat $fasta_files $ref > $cdhit_infasta`;
+my $cdhit_para = "-g 1 -s 0.8 -c 0.8 -r 0";
+`cd-hit-est -i $cdhit_infasta -o $cdhit_out $cdhit_para`;
+
+# modify sequence names for pggb
+`perl $utilsPath/cdhit2pggb.pl --fasta $cdhit_infasta --clust $cdhit_out.clstr >$pggb_infasta`;
 
 ###############################################
-# 
+# pggb
 ###############################################
 
+&runreport("step 04: run pggb");
 
+# index
+`samtools faidx $pggb_infasta`;
+
+# pggb
+my $pggb_para = "-p 90 -s 1000 -n 5 -U -v -L";
+`pggb -i $pggb_infasta -o $pggb_out $pggb_para`;
+`cp $pggb_out/$pggb_infile*viz_inv.png $prefix/$pggb_infile.alignments.png`;
+`cp $pggb_out/$pggb_infile*lay.draw_mqc.png $prefix/$pggb_infile.gfa.layplot.png`;
 
 ###############################################
 #
 ###############################################
 
-&runreport("step 09: finish running");
+&runreport("step 05: finish running");
 
 ###############################################
 # module 1: check command availability
@@ -216,5 +245,4 @@ sub runreport {
 	#print LOG "$dateinfo  ";    
 	#print LOG "  $injob.\n";
 }
-
 

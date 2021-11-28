@@ -19,7 +19,7 @@ use lib "$FindBin::Bin/lib";
 use genegtfadjust;
 use maxbed;
 
-my $version = "0.2.1";
+my $version = "0.2.2";
 
 my $strand = "plus";
 my $prefix = "hpout";
