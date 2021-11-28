@@ -7,6 +7,7 @@ The package is dedicated to structurally compare sequences of homologous genes f
 1. From an annotated genome, the gene sequence and the related gene information can be extracted. The related information including gene annotation, other featured data in GTF/GFF and BED format, transcribed sequences, protein sequences, and gene sequences with trancribed sequences highlighted. The positions of gene annotation and other features are adjusted to the coordinates relative to the newly extracted sequences. The script **geneseq** deploys this procedure.
 2. With a query gene sequence, homologous sequences can be identified in a genome. The homologous gene could be found if a related GTF is supplied. The alignment between two homologous regions are plotted. The script **homocomp** implements homologous searching and visualization of the comparison.
 3. With multiple homologous sequences, sequential alignments can be visualized, which is implemented in the script **homostack**.
+4. Alignments of homologous sequences can also be visualized through using the script **homograph**.
 
 ## Motivation
 
@@ -24,6 +25,7 @@ conda activate homotools
 conda install -c anaconda perl
 conda install -c r r-base
 conda install -c bioconda blast mummer bedtools
+conda install -c bioconda cd-hit pggb
 ```
 
 #### download homotools and run scripts
