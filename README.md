@@ -4,10 +4,11 @@
 
 The package is dedicated to structurally compare sequences of homologous genes from different genomes of a species. Briefly, the package has been developed to perform the following analyses.
 
-1. From an annotated genome, the gene sequence and the related gene information can be extracted. The related information including gene annotation, other featured data in GTF/GFF and BED format, transcribed sequences, protein sequences, and gene sequences with trancribed sequences highlighted. The positions of gene annotation and other features are adjusted to the coordinates relative to the newly extracted sequences. The script **geneseq** deploys this procedure.
-2. With a query gene sequence, homologous sequences can be identified in a genome. The homologous gene could be found if a related GTF is supplied. The alignment between two homologous regions are plotted. The script **homocomp** implements homologous searching and visualization of the comparison.
-3. With multiple homologous sequences, sequential alignments can be visualized, which is implemented in the script **homostack**.
-4. Alignments of homologous sequences can also be visualized through using the script **homograph**.
+1. The script **geneseq** can extract gene sequence, gene annotation, other featured data in GTF/GFF and BED format, transcribed sequences, protein sequences, and gene sequences with transcribed sequences highlighted. The positions of gene annotation and other features are adjusted to the coordinates relative to the newly extracted sequences.
+2. The script **homocomp** implements homologous searching and visualization of the comparison. With a query gene sequence, homologous sequences can be identified in a genome. The homologous gene could be found if a related GTF is supplied. The alignment between two homologous regions are plotted.
+3. The script **homosnpeff** finds and annotates variants between query and reference sequences.
+4. The script **homograph** visalizes alignments of homologous sequences, determines number of haplotypes, and views the haplotype graph. This module is still under development.
+5. The script **homostack** visualizes alignments among multiple homologous sequences.
 
 ## Motivation
 
@@ -16,6 +17,8 @@ The development of **homotools** was motivated by the tedious procedure for extr
 ## Requirements and installation
 
 Shell scripts, Perl, and R were combined for the development. Both Perl and R are generally installed. If needed, please refer to [Perl](https://www.perl.org/) and [R](https://www.r-project.org/) for installation guides. [BLAST+](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/), [MURmer](http://mummer.sourceforge.net/), [BEDtools](https://bedtools.readthedocs.io/en/latest/) are also required.
+
+To run **homograph**, [cd-hit](http://weizhong-lab.ucsd.edu/cd-hit/) and [pggb](https://github.com/pangenome/pggb) are required.
 
 Aternatively, all required packages can be installed through [conda](https://docs.conda.io/en/latest/)
 
@@ -39,7 +42,7 @@ perl ./homotools/homocomp
 cd data
 sh homocomp_testrun.sh
 ```
-The output directory "out" will be prodcued with many PDF plots and other outputs.  
+The output directory "out" will be produced with many PDF plots and other outputs.  
 
 ## geneseq
 
@@ -120,13 +123,44 @@ Usage: homocomp --query <fasta> --db <blast_db> [options]
 
 #### Output from homocomp
 
-Two alignment plots and two dotplots between two sequences are output.
+Three alignment plots and two dotplots between two sequences are output.
 
 ```
-Alignment plot without alignment filtering  : <prefix>.o1.alnplot.pdf
-Alignment plot with alignment filtering     : <prefix>.o2.filt.alnplot.pdf
-Dotplot without alignment filtering         : <prefix>.o3.dotplot.pdf
-Dotplot with alignment filtering            : <prefix>.o4.filt.dotplot.pdf
+Alignment plot without alignment filtering   : <prefix>.o1.alnplot.pdf
+Alignment plot with alignment filtering      : <prefix>.o2.filt.alnplot.pdf
+Alignment plot with filtered unique alignment: <prefix>.o2.filt.uniq.alnplot.pdf
+Dotplot without alignment filtering          : <prefix>.o3.dotplot.pdf
+Dotplot with alignment filtering             : <prefix>.o4.filt.dotplot.pdf
+```
+
+## homograph
+
+#### Usage
+
+```
+Usage: perl ./homograph --dir <dir_containing_fasta_files> [options]
+[Options]
+    --dir <path>      path to a collection of fasta files with suffix of .fa, .fas, or .fasta; required
+    --ref <file>      fasta file of the reference sequence; required
+    --mgpara <str>    minigraph parameters (-xggs -t1 -j 0.2 -l 100)
+    --cdhitpara <str> parameters for cd-hit-est (-g 1 -s 0.8 -c 0.8 -r 0)
+    --pggbpara <str>  parameters for -p and -s in pggb (-p 90 -s 1000)
+    --gene_gtf <file> gtf file of gene structure using coordinates on --ref; optional
+    --threads <num>   number of threads (1)
+    --prefix <str>    prefix of outputs (hgout)
+    --main_label <float>     label to add as the title of haplotype plotting figure (haplotype graph)
+    --refgap_prop <float>    ratio of each gap between segments to the canvas x length (0.02)
+    --nonrefgap_prop <float> ratio of each gap between segments to the canvas x length (0.05)
+    --maxseg_prop <float>    proprotion of the maxium fragment that will not be shortened segments to the canvas x length (0.5)
+    --version         version information
+    --help:           help information
+```
+
+#### Major output from homocomp
+
+```
+Plot of alignments of multiple sequences ordered by cd-hit clustering: <prefix>.4.pggb.in.fasta.alignments.png
+Layout plot based on GFA output                                      : <prefix>.4.pggb.in.fasta.gfa.layplot.png
 ```
 
 ## homostack

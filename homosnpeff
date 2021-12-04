@@ -115,7 +115,7 @@ my $filt_delta_prefix = $prefix."/".$prefix.".2.filt";
 # nucmer
 ###############################################
 `nucmer --prefix $delta_prefix $ref $qry`;
-# filtered alignments:
+# filtered alignments (unique):
 `delta-filter -i $identity -l $match -1 $delta_prefix.delta > $filt_delta_prefix.delta`;
 `show-snps -T $filt_delta_prefix.delta > $filt_delta_prefix.snps`;
 `perl $utilsPath/showsnps2vcf.pl --fasta $ref --var $filt_delta_prefix.snps > $filt_delta_prefix.vcf`;
