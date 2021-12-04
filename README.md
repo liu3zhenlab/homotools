@@ -7,7 +7,7 @@ The package is dedicated to structurally compare sequences of homologous genes f
 1. The script **geneseq** can extract gene sequence, gene annotation, other featured data in GTF/GFF and BED format, transcribed sequences, protein sequences, and gene sequences with transcribed sequences highlighted. The positions of gene annotation and other features are adjusted to the coordinates relative to the newly extracted sequences.
 2. The script **homocomp** implements homologous searching and visualization of the comparison. With a query gene sequence, homologous sequences can be identified in a genome. The homologous gene could be found if a related GTF is supplied. The alignment between two homologous regions are plotted.
 3. The script **homosnpeff** finds and annotates variants between query and reference sequences.
-4. The script **homograph** visalizes alignments of homologous sequences, determines number of haplotypes, and views the haplotype graph. This module is still under development.
+4. The script **homograph** visualizes alignments of homologous sequences, determines number of haplotypes, and views the haplotype graph. This module is still under development.
 5. The script **homostack** visualizes alignments among multiple homologous sequences.
 
 ## Motivation
