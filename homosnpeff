@@ -47,7 +47,7 @@ my %opts = ();
 my ($qry, $ref, $gtf);
 
 &GetOptions(\%opts, "ref=s", "gtf=s", "qry=s", "match=i",
-                    "prefix=s", "version", "help");
+                    "identity=i", "prefix=s", "version", "help");
 
 if (exists $opts{version}) {
 	print "$version\n";
@@ -145,7 +145,7 @@ if (-f "snpEff_summary.html") {
 if (-f "snpEff_genes.txt") {
 	`rm snpEff_genes.txt`;
 }
-`rm snpEff.config ref`;
+`rm snpEff.config`;
 `rm snpEff.jar`;
 `rm -rf $data_dir`;
 

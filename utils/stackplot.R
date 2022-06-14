@@ -3,7 +3,9 @@
 args <- commandArgs(trailingOnly=T)
 datalist <- args[1] # nucmer show-coordi output
 band_color <- args[2] # color to be used for plotting
-outpdf <- args[3] # PDF output file
+identity_min <- args[3]
+identity_max <- args[4]
+outpdf <- args[5] # PDF output file
 
 #setwd("/homes/liu3zhen/scripts2/homotools/case/homostack_case/")
 #datalist <- "/homes/liu3zhen/scripts2/homotools/case/homostack_case/hsout/hsout.1.data.list"
@@ -122,17 +124,22 @@ delta2info <- function(deltafile) {
 }
 
 # data list
-dlist <- read.delim(datalist)
+dlist <- read.delim(datalist, stringsAsFactors=F)
 num_aln <- nrow(dlist)
 xmax <- 0
-identity_max <- 0
-identity_min <- 100
-for (i in 1:num_aln) {
-  aln_df <- delta2info(dlist[i, 2])
-  xmax <- max(aln_df[1, c(2,4)], xmax)
-  identity_max <- max(c(aln_df[1, 5]), identity_max)
-  identity_min <- min(c(aln_df[1, 6]), identity_min)
+if (identity_min == "auto" | identity_max == "auto") {
+  identity_max <- 0
+  identity_min <- 100
+  for (i in 1:num_aln) {
+    aln_df <- delta2info(dlist[i, 2])
+  	xmax <- max(aln_df[1, c(2,4)], xmax)
+  	identity_max <- max(c(aln_df[1, 5]), identity_max)
+    identity_min <- min(c(aln_df[1, 6]), identity_min)
+  }
 }
+
+identity_min <- as.numeric(identity_min)
+identity_max <- as.numeric(identity_max)
 
 # axis of x and y
 xrange <- c(-xmax / 50, xmax + xmax / 50)
