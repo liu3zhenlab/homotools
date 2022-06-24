@@ -38,7 +38,7 @@ sub prompt {
     --annot <file>   bed file to highlight regions in query; required
                      [format, 7 columns separated by Tab]:
                      chr start(0-based) end(1-based) label height(0.01-0.1) strand(+/-) color(R compatible)
-					 if specified, the number --annot needs to match the number of --seq;
+                     if specified, the number --annot needs to match the number of --seq;
                      they will be paired by their order, i.e., 1st --seq paired with 1st --annot;
                      if some --annot has no data, input "none".
     --identity <num> minimal percentage of identity from 0 to 100 ($identity)
