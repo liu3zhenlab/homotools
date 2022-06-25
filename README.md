@@ -92,7 +92,8 @@ Usage: homocomp --query <fasta> --db <blast_db> [options]
 [Options]
     --query <file>   fasta file containing a sequence as the query; required
     --qryadd <file>  bed file to highlight regions in query; optional 
-    [format]:chr start(0-based) end(1-based) label color(R compatible) height(0.01-0.1)
+    [format, 7 columns separated by Tab]:
+    chr start(0-based) end(1-based) label height(0.01-0.1) strand(+/-) color(R compatible)
     --db <db_name>   blast database; required
     --dbacc <str>    accession name of reference database; optional
     --ref <file>     fasta file of the reference; optional
