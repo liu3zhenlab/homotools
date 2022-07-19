@@ -1,7 +1,6 @@
 # homotools
 
-### NOTE: This is NOT a finished project. If you are interested in contributing to this project, please contact [Sanzhen Liu](liu3zhen@ksu.edu).
-
+### NOTE: This is NOT a finished project. In particular, **homograph** needs to be improved. If you are interested in contributing to this project, please contact [Sanzhen Liu](liu3zhen@ksu.edu).
 ## What can homotools do?
 
 The package is dedicated to structurally compare sequences of homologous genes from different genomes of a species. Briefly, the package has been developed to perform the following analyses.
