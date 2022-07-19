@@ -1,6 +1,6 @@
 # homotools
 
-### NOTE: This is NOTE a finished project. If you are interested in contributing to this project, please contact [Sanzhen Liu](liu3zhen@ksu.edu).
+### NOTE: This is NOT a finished project. If you are interested in contributing to this project, please contact [Sanzhen Liu](liu3zhen@ksu.edu).
 
 ## What can homotools do?
 
