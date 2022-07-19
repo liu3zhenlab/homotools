@@ -1,5 +1,7 @@
 # homotools
 
+### NOTE: This is NOTE a finished project. If you are interested in contributing to this project, please contact [Sanzhen Liu](liu3zhen@ksu.edu).
+
 ## What can homotools do?
 
 The package is dedicated to structurally compare sequences of homologous genes from different genomes of a species. Briefly, the package has been developed to perform the following analyses.
