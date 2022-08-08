@@ -44,8 +44,8 @@ sub prompt {
     --identity <num> minimal percentage of identity from 0 to 100 ($identity)
     --match <num>    minimal bp match of an alignment ($match)
     --prefix <str>   the output directory and the prefix for output files ($prefix)
-    --minident <num> lowest identity for plotting scaling, 0-100 or auto (auto)
-    --maxident <num> highest identity for plotting scaling, 0-100 or auto (auto)
+    --minident <num> lowest identity for plotting color scaling, 0-100 or auto (auto)
+    --maxident <num> highest identity for plotting color scaling, 0-100 or auto (auto)
     --threads <num>  number of cpus ($threads)
     --bandcol <str>  a valid R color name ($bandcol)
     --version        version information
