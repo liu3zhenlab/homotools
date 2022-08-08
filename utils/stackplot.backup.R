@@ -126,28 +126,15 @@ delta2info <- function(deltafile) {
 # data list
 dlist <- read.delim(datalist, stringsAsFactors=F)
 num_aln <- nrow(dlist)
-
-# xmax
 xmax <- 0
-for (i in 1:num_aln) { 
-	aln_df <- delta2info(dlist[i, 2])
-	xmax <- max(aln_df[1, c(2,4)], xmax)
-}
-
-# identity_min and _max
-if (identity_min == "auto") {
+if (identity_min == "auto" | identity_max == "auto") {
+  identity_max <- 0
   identity_min <- 100
   for (i in 1:num_aln) {
     aln_df <- delta2info(dlist[i, 2])
-    identity_min <- min(c(aln_df[1, 6]), identity_min)
-  }
-}
-
-if (identity_max == "auto") {
-  identity_max <- 0
-  for (i in 1:num_aln) {
-    aln_df <- delta2info(dlist[i, 2])
+  	xmax <- max(aln_df[1, c(2,4)], xmax)
   	identity_max <- max(c(aln_df[1, 5]), identity_max)
+    identity_min <- min(c(aln_df[1, 6]), identity_min)
   }
 }
 

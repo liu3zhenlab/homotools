@@ -19,7 +19,7 @@ use lib "$FindBin::Bin/lib";
 use genegtfadjust;
 use maxbed;
 
-my $version = "0.2.2";
+my $version = "0.2.3";
 
 my $identity = 80; 
 my $match = 100;
@@ -44,8 +44,8 @@ sub prompt {
     --identity <num> minimal percentage of identity from 0 to 100 ($identity)
     --match <num>    minimal bp match of an alignment ($match)
     --prefix <str>   the output directory and the prefix for output files ($prefix)
-    --minident <num> lowest identity, 0-100 or auto (auto)
-    --maxident <num> highest identity, 0-100 or auto (auto)
+    --minident <num> lowest identity for plotting scaling, 0-100 or auto (auto)
+    --maxident <num> highest identity for plotting scaling, 0-100 or auto (auto)
     --threads <num>  number of cpus ($threads)
     --bandcol <str>  a valid R color name ($bandcol)
     --version        version information
@@ -147,8 +147,9 @@ for (my $i=0; $i<$#seq; $i++) {
 	`nucmer --mum --delta $delta_out --threads $threads $current_seq $next_seq`;
 	`echo -e "sstart\tsend\tqstart\tqend\tsmatch\tqmatch\tidentity\tslen\tqlen\tsubj\tqry" > $nucmer_show`;
 	`show-coords -HTl -I $identity -L $match $delta_out >> $nucmer_show`;
-
 	print OUT "$i\t$nucmer_show\t$current_seq\t$current_bed\t$next_seq\t$next_bed\n";
+	# cleanup
+	`rm $delta_out`;
 }
 close OUT;
 
@@ -162,10 +163,6 @@ my $stackplot_r = $utilsPath."/stackplot.R";
 `Rscript $stackplot_r $data_list $bandcol $minident $maxident $pdfout`;
 
 &runreport("step 03: alignment plotted");
-
-###############################################
-# cleanup
-###############################################
 
 ###############################################
 # module 1: check command availability
