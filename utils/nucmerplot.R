@@ -165,7 +165,7 @@ nucmerplot <- function(datafile, band_col="deepskyblue4", outpath=".", imageoutf
   # query highlights
   highlight_names <- NULL
   if (query_highlight_bed != "empty") { # highlight regions on query
-    #chr start end label height strand color
+	#chr start end label height strand color
 	#10	1000	2488	gene	0.015	+	gray60
 	qry_highlight <- read.delim(query_highlight_bed, comment.char="#", stringsAsFactors=F, header=F)
 	if (nrow(qry_highlight)>0) {

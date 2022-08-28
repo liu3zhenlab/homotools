@@ -1,0 +1,13 @@
+A188_chr1:5214179-5219489(+)	maker	exon	14	505	.	+	.	transcript_id "Zm00056a000187_T003"; gene_id "Zm00056a000187"; gene_name "Zm00056a000187";
+A188_chr1:5214179-5219489(+)	maker	exon	559	948	.	+	.	transcript_id "Zm00056a000187_T003"; gene_id "Zm00056a000187"; gene_name "Zm00056a000187";
+A188_chr1:5214179-5219489(+)	maker	exon	1073	1193	.	+	.	transcript_id "Zm00056a000187_T003"; gene_id "Zm00056a000187"; gene_name "Zm00056a000187";
+A188_chr1:5214179-5219489(+)	maker	exon	4057	4247	.	+	.	transcript_id "Zm00056a000187_T003"; gene_id "Zm00056a000187"; gene_name "Zm00056a000187";
+A188_chr1:5214179-5219489(+)	maker	exon	4356	4487	.	+	.	transcript_id "Zm00056a000187_T003"; gene_id "Zm00056a000187"; gene_name "Zm00056a000187";
+A188_chr1:5214179-5219489(+)	maker	exon	4783	4916	.	+	.	transcript_id "Zm00056a000187_T003"; gene_id "Zm00056a000187"; gene_name "Zm00056a000187";
+A188_chr1:5214179-5219489(+)	maker	exon	5022	5311	.	+	.	transcript_id "Zm00056a000187_T003"; gene_id "Zm00056a000187"; gene_name "Zm00056a000187";
+A188_chr1:5214179-5219489(+)	maker	CDS	601	948	.	+	0	transcript_id "Zm00056a000187_T003"; gene_id "Zm00056a000187"; gene_name "Zm00056a000187";
+A188_chr1:5214179-5219489(+)	maker	CDS	1073	1193	.	+	0	transcript_id "Zm00056a000187_T003"; gene_id "Zm00056a000187"; gene_name "Zm00056a000187";
+A188_chr1:5214179-5219489(+)	maker	CDS	4057	4247	.	+	2	transcript_id "Zm00056a000187_T003"; gene_id "Zm00056a000187"; gene_name "Zm00056a000187";
+A188_chr1:5214179-5219489(+)	maker	CDS	4356	4487	.	+	0	transcript_id "Zm00056a000187_T003"; gene_id "Zm00056a000187"; gene_name "Zm00056a000187";
+A188_chr1:5214179-5219489(+)	maker	CDS	4783	4916	.	+	0	transcript_id "Zm00056a000187_T003"; gene_id "Zm00056a000187"; gene_name "Zm00056a000187";
+A188_chr1:5214179-5219489(+)	maker	CDS	5022	5025	.	+	1	transcript_id "Zm00056a000187_T003"; gene_id "Zm00056a000187"; gene_name "Zm00056a000187";
