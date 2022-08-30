@@ -1,0 +1,8 @@
+Zm00035ab147480	NAM	exon	2023	2423	.	+	.	transcript_id "Zm00035ab147480_T003"; gene_id "Zm00035ab147480";
+Zm00035ab147480	NAM	exon	13509	13581	.	+	.	transcript_id "Zm00035ab147480_T003"; gene_id "Zm00035ab147480";
+Zm00035ab147480	NAM	exon	13875	13930	.	+	.	transcript_id "Zm00035ab147480_T003"; gene_id "Zm00035ab147480";
+Zm00035ab147480	NAM	exon	14004	14247	.	+	.	transcript_id "Zm00035ab147480_T003"; gene_id "Zm00035ab147480";
+Zm00035ab147480	NAM	CDS	2239	2423	.	+	0	transcript_id "Zm00035ab147480_T003"; gene_id "Zm00035ab147480";
+Zm00035ab147480	NAM	CDS	13509	13581	.	+	1	transcript_id "Zm00035ab147480_T003"; gene_id "Zm00035ab147480";
+Zm00035ab147480	NAM	CDS	13875	13930	.	+	0	transcript_id "Zm00035ab147480_T003"; gene_id "Zm00035ab147480";
+Zm00035ab147480	NAM	CDS	14004	14109	.	+	1	transcript_id "Zm00035ab147480_T003"; gene_id "Zm00035ab147480";

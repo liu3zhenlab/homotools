@@ -1,0 +1,8 @@
+Zm00041ab149100	NAM	exon	2023	2423	.	+	.	transcript_id "Zm00041ab149100_T002"; gene_id "Zm00041ab149100";
+Zm00041ab149100	NAM	exon	26247	26319	.	+	.	transcript_id "Zm00041ab149100_T002"; gene_id "Zm00041ab149100";
+Zm00041ab149100	NAM	exon	26613	26668	.	+	.	transcript_id "Zm00041ab149100_T002"; gene_id "Zm00041ab149100";
+Zm00041ab149100	NAM	exon	26742	26985	.	+	.	transcript_id "Zm00041ab149100_T002"; gene_id "Zm00041ab149100";
+Zm00041ab149100	NAM	CDS	2239	2423	.	+	0	transcript_id "Zm00041ab149100_T002"; gene_id "Zm00041ab149100";
+Zm00041ab149100	NAM	CDS	26247	26319	.	+	1	transcript_id "Zm00041ab149100_T002"; gene_id "Zm00041ab149100";
+Zm00041ab149100	NAM	CDS	26613	26668	.	+	0	transcript_id "Zm00041ab149100_T002"; gene_id "Zm00041ab149100";
+Zm00041ab149100	NAM	CDS	26742	26847	.	+	1	transcript_id "Zm00041ab149100_T002"; gene_id "Zm00041ab149100";

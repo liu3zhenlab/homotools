@@ -1,0 +1,8 @@
+Zm00018ab147610	NAM	exon	2023	2423	.	+	.	transcript_id "Zm00018ab147610_T002"; gene_id "Zm00018ab147610";
+Zm00018ab147610	NAM	exon	12996	13068	.	+	.	transcript_id "Zm00018ab147610_T002"; gene_id "Zm00018ab147610";
+Zm00018ab147610	NAM	exon	13362	13417	.	+	.	transcript_id "Zm00018ab147610_T002"; gene_id "Zm00018ab147610";
+Zm00018ab147610	NAM	exon	13491	13734	.	+	.	transcript_id "Zm00018ab147610_T002"; gene_id "Zm00018ab147610";
+Zm00018ab147610	NAM	CDS	2239	2423	.	+	0	transcript_id "Zm00018ab147610_T002"; gene_id "Zm00018ab147610";
+Zm00018ab147610	NAM	CDS	12996	13068	.	+	1	transcript_id "Zm00018ab147610_T002"; gene_id "Zm00018ab147610";
+Zm00018ab147610	NAM	CDS	13362	13417	.	+	0	transcript_id "Zm00018ab147610_T002"; gene_id "Zm00018ab147610";
+Zm00018ab147610	NAM	CDS	13491	13596	.	+	1	transcript_id "Zm00018ab147610_T002"; gene_id "Zm00018ab147610";
