@@ -19,9 +19,10 @@ use lib "$FindBin::Bin/lib";
 use genegtfadjust;
 use maxbed;
 
-my $version = "0.2.2";
+my $version = "0.2.3";
+# 0.2.3: allow an automatic choice for strand (plus or minus)
 
-my $strand = "plus";
+my $strand = "auto";
 my $prefix = "hpout";
 my $threads = 1;
 my $identity = 80;
@@ -53,7 +54,7 @@ sub prompt {
     --tgtf <file>    the gene annotation GTF file of the target; optional
     --tgtf_all       if specified, all genes on the target region are highlighted with no text labels;
                      by default, only the one with the longest alignment is highlighted and with a text label.
-    --strand <str>   plus (or +) or minus (or -) ($strand)
+    --strand <str>   plus (or +), minus (or -), or auto ($strand)
     --evalue <str>   maximal E-value ($evalue)
     --identity <num> minimal percentage of identity from 0 to 100 ($identity)
     --match <num>    minimal bp match of an alignment ($match)
@@ -120,9 +121,9 @@ if ($opts{ref}) {
 }
 
 if (exists $opts{strand}) {
-	if (($opts{strand} ne "+") and ($opts{strand} ne "-") and ($opts{strand} ne "plus") and ($opts{strand} ne "minus")) {
+	if (($opts{strand} ne "+") and ($opts{strand} ne "-") and ($opts{strand} ne "plus") and ($opts{strand} ne "minus") and ($opts{strand} ne "auto")) {
 		print STDERR "$opts{strand}\n";
-		print STDERR RED, "--strand must be plus, +, minus, or -\n", RESET;
+		print STDERR RED, "--strand must be auto, plus, +, minus, or -\n", RESET;
 		print STDERR RED, "Exit\n", RESET;
 		exit;
 	} elsif ($opts{strand} eq "+") {
@@ -297,8 +298,8 @@ if (!exists $opts{noblastn}) {
 #"qseqid qlen sseqid slen length(5) pident qcovs qstart qend sstart (10) send evalue bitscore"
 	my $highest_bitscore = 0;
 	my ($hit_start, $hit_end);
-
 	my ($best_hit_chr, $best_hit_pos);
+	my $strand_auto = 0;
 	open(IN, "<", $blastn_filt) || die;
 	while(<IN>) {
 		chomp;
@@ -311,9 +312,21 @@ if (!exists $opts{noblastn}) {
 			$best_hit_chr = $line[2];
 			$best_hit_pos = int(($line[9] + $line[10]) / 2);
 			$highest_bitscore = $bitscore;
+			if ($strand eq "auto") {
+				if ($line[10] > $line[9]) {
+					$strand = "plus";
+				} else {
+					$strand = "minus";
+				}
+				$strand_auto = 1;
+			}
 		}
 	}
 	close IN;
+	
+	if ($strand_auto) {
+		print STDERR "  - $strand is the automatically strand choice\n";
+	}
 
 	&runreport("step 04: best hit is $best_hit_chr:$best_hit_pos");
 
@@ -457,6 +470,8 @@ if (defined $target_gtf) {
 			`cat $target_adjust_gtf_prefix*bed | sort -k4r,4 -k2n,2 > $target_add`;
 		} else {
 			$target_add = maxbed::maxbed($bedfiles);
+			#Zm00018ab163500_T001.adjusted.bed
+			`basename $target_add | sed 's/.adjusted.bed//g' > $target_adjust_gtf_prefix"selected_feature"`;
 			&runreport("step 07c: A BED file was selected: $target_add");
 		}
 	}
