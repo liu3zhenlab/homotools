@@ -1,10 +1,9 @@
 #!/usr/bin/perl -w
 #======================================================================
-# homocomp
-#
+# homomine_comp
+# modified from homocomp
 # Author: Sanzhen Liu <liu3zhen@ksu.edu>
-# 3/2/2021
-#
+# 2/5/2023
 # The Perl script to find the match region and plot alignments
 #======================================================================
 
@@ -15,7 +14,7 @@ use File::Temp;
 use FindBin;
 use Term::ANSIColor qw(:constants);
 use FindBin;
-use lib "$FindBin::Bin/lib";
+use lib "$FindBin::Bin/../lib";
 use genegtfadjust;
 use maxbed;
 
@@ -34,12 +33,14 @@ my $right_ext = 0;
 my $expand = 10;
 my $bandcol = "bisque3";
 my $query_add = "empty";
+
 sub prompt {
     print <<EOF;
     Usage: perl $0 --query <fasta> --db <blast_db> [options]
     [Options]
     --query <file>   fasta file containing a sequence as the query; required
-    --qryadd <file>  bed file to highlight regions in query; optional 
+    --qrygene <str>  gene information related to --query; optional
+	--qryadd <file>  bed file to highlight regions in query; optional 
         [format, 7 columns separated by Tab]:
         chr start(0-based) end(1-based) label height(0.01-0.1) strand(+/-) color(R compatible)
     --db <db_name>   blast database; required
@@ -52,8 +53,6 @@ sub prompt {
     --tend <num>     bp position for the region end; optional
                      if specified, the value will be used as the right end
     --tgtf <file>    the gene annotation GTF file of the target; optional
-    --tgtf_all       if specified, all genes on the target region are highlighted with no text labels;
-                     by default, only the one with the longest alignment is highlighted and with a text label.
     --strand <str>   plus (or +), minus (or -), or auto ($strand)
     --evalue <str>   maximal E-value ($evalue)
     --identity <num> minimal percentage of identity from 0 to 100 ($identity)
@@ -80,10 +79,9 @@ exit;
 my %opts = ();
 my ($query, $db);
 
-&GetOptions(\%opts, "query=s", "qryadd=s", "db=s", "ref=s", "dbacc=s",
-                    "strand=s", "tchr=s", "tstart=i", "tend=i",
-					"tgtf=s", "tgtf_all",
-                    "identity=i", "match=i", "coverage=i", "evalue=i",
+&GetOptions(\%opts, "query=s", "qrygene=s", "qryadd=s", "db=s", "ref=s", "dbacc=s",
+                    "strand=s", "tchr=s", "tstart=i", "tend=i", "tgtf=s",
+                    "identity=i", "match=i", "coverage=i", "evalue=s",
 					"repeatdust", "lext=i", "rext=i", "expand=i",
                     "prefix=s", "threads=i", "bandcol=s",
                     "noblastn", "version", "help");
@@ -134,6 +132,7 @@ if (exists $opts{strand}) {
 		$strand = $opts{strand};
 	}
 }
+my $qrygene = exists $opts{qrygene} ? $opts{qrygene} : "gene";
 my $db_accession = exists $opts{dbacc} ? $opts{dbacc} : "db";
 my $target_gtf = $opts{tgtf} if exists $opts{tgtf};
 $evalue = $opts{evalue} if exists $opts{evalue};
@@ -159,83 +158,75 @@ if (-d $prefix) {
 
 # script path:
 my $scriptPath = $FindBin::Bin;
-my $utilsPath = $scriptPath."/utils/";
+my $utilsPath = $scriptPath;
 
 
-&runreport("Start to run homocomp");
-
-###############################################
-# check requirments
-###############################################
-&cmd_check("blastn");
-&cmd_check("nucmer");
-&cmd_check("R");
-&cmd_check("bedtools");
-&cmd_check("awk");
-&cmd_check("blastdbcmd");
-&cmd_check("delta-filter");
-&cmd_check("show-coords");
-
-&runreport("step 01: Requirement checked");
+&runreport("Run homocomp with target genome");
 
 ###############################################
 # intermediate output
 ###############################################
+# basename
+my $basename = $qrygene."_".$db_accession;
 # blastn output
-my $blastn_raw = $prefix."/".$prefix.".1.raw.blastn";
-my $blastn_out = $prefix."/".$prefix.".1.blastn";
+my $blastn_raw = $prefix."/".$basename.".1.raw.blastn";
+my $blastn_out = $prefix."/".$basename.".1.blastn";
 
 # filtered blastn output
-my $blastn_filt = $prefix."/".$prefix.".2.blastn.filt";
+my $blastn_filt = $prefix."/".$basename.".2.blastn.filt";
 
 # bed file for sequence extraction
-my $target_bed = $prefix."/".$prefix.".3.target.bed";
+my $target_bed = $prefix."/".$basename.".3.target.bed";
 
 # reference fasta file
 my $ref_fas;
 if (exists $opts{ref}) {
 	$ref_fas = $opts{ref};
 } else {
-	$ref_fas = $prefix."/".$prefix.".0.ref.fas";
+	$ref_fas = $prefix."/0.ref.fas";
 }
 
 # target fasta file
-my $target_fas = $prefix."/".$prefix.".4.target.fas";
+my $target_fas = $prefix."/".$basename.".4.target.fas";
 
 # target GTF and BED output prefix (only output if --tgtf is specified)
 my $target_adjust_gtf_prefix;
 my $target_annotation_gtf;
 my $target_annotation_bed;
 if (defined $target_gtf) {
-	$target_annotation_gtf = $prefix."/".$prefix.".4b.target.raw.annotation.gtf";
-	my $target_annotation_dir = $prefix."/".$prefix.".4c.target.posadj.annotation";	
+	$target_annotation_gtf = $prefix."/".$basename.".4b.target.original.gtf";
+	my $target_annotation_dir = $prefix."/".$basename.".4c.target.posadj.annotation";	
 	if (!-d $target_annotation_dir) {
 		`mkdir $target_annotation_dir`;
 	}
 	$target_adjust_gtf_prefix = $target_annotation_dir."/";
 
 	if (exists $opts{tgtf_all}) {
-		$target_annotation_bed = $prefix."/".$prefix.".4d.target.add.bed";
+		$target_annotation_bed = $prefix."/".$basename.".4d.target.add.bed";
 	}
 }
 
 # nucmer output
-my $delta_out = $prefix."/".$prefix.".5a.delta";
-my $nucmer_show = $prefix."/".$prefix.".5b.delta.txt";
-my $nucmer_filt_show = $prefix."/".$prefix.".5c.filt.delta.txt";
+my $delta_out = $prefix."/".$basename.".5a.delta";
+my $nucmer_show = $prefix."/".$basename.".5b.delta.txt";
+my $nucmer_filt_show = $prefix."/".$basename.".5c.filt.delta.txt";
 
-my $uniq_delta_out = $prefix."/".$prefix.".5d.uniq.delta";
-my $uniq_delta_filt = $prefix."/".$prefix.".5e.uniq.filt.delta";
-my $nucmer_uniq_filt_show = $prefix."/".$prefix.".5f.uniq.filt.delta.txt";
+my $uniq_delta_out = $prefix."/".$basename.".5d.uniq.delta";
+my $uniq_delta_filt = $prefix."/".$basename.".5e.uniq.filt.delta";
+my $nucmer_uniq_filt_show = $prefix."/".$basename.".5f.uniq.filt.delta.txt";
 
 # PDF plotting
-my $alnplot_pdf = $prefix.".o1.alnplot.pdf";
-my $filt_alnplot_pdf = $prefix.".o2.filt.alnplot.pdf";
-my $uniq_filt_alnplot_pdf = $prefix.".o3.uniq.filt.alnplot.pdf";
+my $alnplot_pdf = $basename.".o1.alnplot.pdf";
+my $filt_alnplot_pdf = $basename.".o2.filt.alnplot.pdf";
+my $uniq_filt_alnplot_pdf = $basename.".o3.uniq.filt.alnplot.pdf";
 
-my $dotplot_pdf = $prefix.".o4.dotplot.pdf";
-my $filt_dotplot_pdf = $prefix.".o5.filt.dotplot.pdf";
-my $uniq_filt_dotplot_pdf = $prefix.".o6.uniq.filt.dotplot.pdf";
+my $dotplot_pdf = $basename.".o4.dotplot.pdf";
+my $filt_dotplot_pdf = $basename.".o5.filt.dotplot.pdf";
+my $uniq_filt_dotplot_pdf = $basename.".o6.uniq.filt.dotplot.pdf";
+
+# final hit range
+my $hit_output = $prefix."/hit.output";
+open(HIT, ">", $hit_output) || die;
 
 ###############################################
 # blastn
@@ -249,13 +240,13 @@ if (!exists $opts{noblastn}) {
 	`blastn -db $db -query $query -evalue $evalue -num_threads $threads -outfmt "$blastn_fmt" > $blastn_raw`;
 
 	if (-z $blastn_raw) { # empty?
-		&runreport("step 02: no Blastn alignments found");
+		&runreport("  no Blastn alignments found");
 		print STDERR RED, "Exit\n", RESET;
 		exit;
 	} else {
 		my $blastn_nrow=`wc -l $blastn_raw`;
 		chomp $blastn_nrow;
-		&runreport("step 02: Blastn alignments generated");
+		&runreport("  Blastn alignments generated");
 		print STDERR "  - hits: $blastn_nrow\n";
 	}
 
@@ -264,7 +255,7 @@ if (!exists $opts{noblastn}) {
 		`perl $utilsPath/repeatdust.pl $blastn_raw > $blastn_out`;
 		my $blastn2_nrow=`wc -l $blastn_out`;
 		chomp $blastn2_nrow;
-		&runreport("step 02b: Repetitive blastn alignments removed");
+		&runreport("  Repetitive blastn alignments removed");
 		print STDERR "  - hits: $blastn2_nrow\n";
 	} else {
 		`mv $blastn_raw $blastn_out`;
@@ -278,13 +269,13 @@ if (!exists $opts{noblastn}) {
 	}
 
 	if (-z $blastn_filt) { # empty?
-		&runreport("step 03: no alignments left after filtering");
+		&runreport("  no alignments left after filtering");
 		print STDERR RED, "Exit\n", RESET;
 		exit;
 	} else {
 		my $blastn_filt_nrow=`wc -l $blastn_filt`;
 		chomp $blastn_filt_nrow;
-		&runreport("step 03: Alignments filtered");
+		&runreport("  Alignments filtered");
 		print STDERR "  - hits: $blastn_filt_nrow\n";
 	}
 
@@ -314,10 +305,10 @@ if (!exists $opts{noblastn}) {
 			$best_hit_pos = int(($line[9] + $line[10]) / 2);
 			$highest_bitscore = $bitscore;
 			if ($strand eq "auto") {
-				if ($line[9] > $line[10]) {
-					$auto_strand_value = "minus";
-				} else {
+				if ($line[10] > $line[9]) {
 					$auto_strand_value = "plus";
+				} else {
+					$auto_strand_value = "minus";
 				}
 				$strand_auto = 1;
 			}
@@ -330,7 +321,7 @@ if (!exists $opts{noblastn}) {
 		print STDERR "  - $strand is the automatically strand choice\n";
 	}
 
-	&runreport("step 04: best hit is $best_hit_chr:$best_hit_pos");
+	&runreport("  best hit is $best_hit_chr:$best_hit_pos");
 
 	my $scan_start = $best_hit_pos - $query_length * $expand;
 	my $scan_end = $best_hit_pos + $query_length * $expand;
@@ -357,7 +348,7 @@ if (!exists $opts{noblastn}) {
 		}
 	}
 	close IN;
-	&runreport("step 05: hit range is $best_hit_chr:$hit_start-$hit_end");
+	&runreport("  hit range is $best_hit_chr:$hit_start-$hit_end");
 	print STDERR "  - hit searching is within $scan_start:$scan_end\n";
 	$target_chr = $best_hit_chr;
 
@@ -366,7 +357,7 @@ if (!exists $opts{noblastn}) {
 ###############################################
 	my $hit_ext_start = $hit_start - $left_ext;
 	my $hit_ext_end = $hit_end + $right_ext;
-	&runreport("step 06: target range");
+	&runreport("  target range");
 	# target start
 	if (exists $opts{tstart}) {
 		$target_start = $opts{tstart};
@@ -409,12 +400,15 @@ if (!exists $opts{noblastn}) {
 	
 	$target_start = $opts{tstart};
 	$target_end = $opts{tend};
-	&runreport("step 02-06 of blastn and others skipped");
+	&runreport("  blastn and others skipped");
 }
 
 # final target and bedtools sequence extraction
 print STDERR "  - Final target range is: $target_chr:$target_start-$target_end.\n";
-
+print HIT "chr\t$target_chr\n";
+print HIT "start\t$target_start\n";
+print HIT "end\t$target_end\n";
+print HIT "strand\t$strand\n";
 
 ###############################################
 # extract target sequence 
@@ -437,20 +431,21 @@ if (-f $target_fas) {
 my $target_final_name = $target_name."(".$strand_char.")";
 
 if (-f $target_fas) {
-	&runreport("step 07: target sequence extracted");
+	&runreport("  target sequence extracted");
 } else {
 	print STDERR RED, "target sequence failed to extract\n", RESET;
 	print STDERR RED, "Exit\n", RESET;
 	exit;
 }
 
-
 ###############################################
 # annotation if supplied
 ###############################################
 my $target_add = "empty";
+my $select_transcript = "";
+my $select_gene = "";
 if (defined $target_gtf) {
-	`bedtools intersect -a $target_gtf -b $target_bed > $target_annotation_gtf`; # intersect segments
+	`bedtools intersect -a $target_gtf -b $target_bed -nonamecheck > $target_annotation_gtf`; # intersect segments
 	# adjust position to a newly defined start for gene information in a GTF
 	# and output a position-adjusted GTF and BED file for each transcript
 	my $start_to_adjusted = $target_start;
@@ -458,26 +453,28 @@ if (defined $target_gtf) {
 		 $start_to_adjusted = $target_end;
 	}
 	genegtfadjust::genegtfadjust($target_annotation_gtf, $start_to_adjusted, $target_adjust_gtf_prefix, $target_final_name);
-	&runreport("step 07b: target annotation extracted");
+	&runreport("  target annotation extracted");
 	
 	# select the bed with the largest total bp lengths to highlighted
 	my $bedfiles = `ls $target_adjust_gtf_prefix*bed`;
 	chomp $bedfiles;
 	if ($bedfiles eq "") {
 		$target_add = "empty";
-		&runreport("step 07c: no target annotation files founded");
+		&runreport("  no target annotation files founded");
 	} else {
-		if (exists $opts{tgtf_all}) {
-			$target_add = $target_annotation_bed; 
-			`cat $target_adjust_gtf_prefix*bed | sort -k4r,4 -k2n,2 > $target_add`;
-		} else {
-			$target_add = maxbed::maxbed($bedfiles);
-			#Zm00018ab163500_T001.adjusted.bed
-			`basename $target_add | sed 's/.adjusted.bed//g' > $target_adjust_gtf_prefix"selected_feature"`;
-			&runreport("step 07c: A BED file was selected: $target_add");
-		}
+		$target_add = maxbed::maxbed($bedfiles);
+		#Zm00018ab163500_T001.adjusted.bed
+		`basename $target_add | sed 's/.adjusted.bed//g' > $target_adjust_gtf_prefix"/selected_feature"`;
+		$select_transcript = `basename $target_add | sed 's/.adjusted.bed//g'`;	
+		chomp $select_transcript;
+		$select_gene = &transcript2gene($target_annotation_gtf, $select_transcript);
+		&runreport("  A BED file was selected: $target_add");
 	}
 }
+
+print HIT "gene\t$select_gene\n";
+print HIT "transcript\t$select_transcript\n";
+
 
 ###############################################
 # compare via nucmer
@@ -496,8 +493,7 @@ if (defined $target_gtf) {
 `echo -e "qstart\tqend\tsstart\tsend\tqmatch\tsmatch\tidentity\tqlen\tslen\tqry\tsubj" > $nucmer_uniq_filt_show`;
 `show-coords -HTl $uniq_delta_filt >> $nucmer_uniq_filt_show`;
 
-
-&runreport("step 08: sequences compared");
+&runreport("  Query and target sequences compared");
 
 ###############################################
 # alignment plot
@@ -513,7 +509,7 @@ my $dotplot_r = $utilsPath."/dotplot.R";
 `Rscript $dotplot_r $nucmer_filt_show $bandcol $prefix $filt_dotplot_pdf`;
 `Rscript $dotplot_r $nucmer_uniq_filt_show $bandcol $prefix $uniq_filt_dotplot_pdf`;
 
-&runreport("step 09: finish running");
+&runreport("  finish target searching");
 
 ###############################################
 # cleanup
@@ -522,18 +518,7 @@ if (! exists $opts{ref}) {
 	`rm $ref_fas*`;
 }
 
-###############################################
-# module 1: check command availability
-###############################################
-sub cmd_check {
-	my $cmd = shift;
-	my $cmdPath=`which $cmd 2>/dev/null`;
-	if (!$cmdPath) {# not founded
-		print STDERR RED, "  $cmd is not found\n", RESET;
-		print STDERR RED, "Exit\n", RESET;
-		exit;
-	}
-}
+close HIT;
 
 ###############################################
 # module 2: report running result
@@ -548,4 +533,28 @@ sub runreport {
 	#print LOG "  $injob.\n";
 }
 
+###############################################
+# module 3: transcript to gene
+###############################################
+sub transcript2gene {
+# convert transcript to gene using GTF data
+	my ($ingtf, $intranscript) = @_;
+	my $outgene = "";
+	open(INGTF, "<", $ingtf) || die;
+	while (<INGTF>) {
+		chomp;
+		if (/transcript_id \"$intranscript\"; gene_id \"(\S+)\"/) {
+			$outgene = $1;
+			last;
+		} elsif (/transcript_id \"$intranscript\";.*gene_name \"(\S+)\"/) {
+			$outgene = $1;
+			last;
+		}
+	}	
+	if ($outgene eq "") {
+		print STDERR MAGENTA, "No gene name was identified\n", RESET;
+	}
+	close INGTF;
+	return $outgene;
+}
 
