@@ -1,0 +1,465 @@
+#!/usr/bin/perl -w
+#======================================================================
+# homomine
+#
+# Author: Sanzhen Liu <liu3zhen@ksu.edu>
+# 1/30/2023
+#
+# The Perl script to find the match region and plot alignments
+#======================================================================
+
+use strict;
+use warnings;
+use Getopt::Long;
+use File::Temp;
+use FindBin;
+use Term::ANSIColor qw(:constants);
+use lib "$FindBin::Bin/lib";
+#use genegtfadjust;
+#use maxbed;
+use Cwd;
+
+my $version = "0.2.3";
+
+my $ext5 = 1000;
+my $ext3 = 500;
+my $strand = "auto";
+my $prefix = "hmout";
+my $threads = 1;
+my $identity = 80;
+my $match = 100;
+my $coverage = 0;
+my $evalue = '1e-10';
+my $expand = 10;
+my $bandcol = "bisque3";
+my $query_add = "empty";
+
+sub prompt {
+    print <<EOF;
+    Usage: perl $0 --qrygene <gene_name> --qrybase <qry_base_name> --tgtbase <target_base_name> [options]
+    [Options]
+    --qrygene <str>    fasta file containing a sequence as the query; required
+    --qryisoform <str> isoform name of the input gene (default is the first one)
+    --qrydir <str>     directory path storing query data; required
+    --qrybase <file>   base name for files of the query genome; required
+    --tgtdir <str>     directorry path storing target data; required
+    --tgtbase <file>   base name for files of the target genome; required
+    --ext5 <num>       bp extension from 5' site ($ext5)
+    --ext3 <num>       bp extension from 3' site ($ext3)
+    --tchr <str>       targeted chromosome or contig; optional
+    --tstart <num>     bp position for the region start in target chromosome; optional
+    --tend <num>       bp position for the region end in target chromosome; optional
+    --strand <str>     plus (or +), minus (or -), or auto ($strand)
+    --evalue <str>     maximal E-value ($evalue)
+    --identity <num>   minimal percentage of identity from 0 to 100 ($identity)
+    --match <num>      minimal bp match of an alignment ($match)
+    --coverage <num>   minimal coverage of the query ($coverage)
+    --repeatdust       remove repetitive blastn alignments if specified
+    --expand <num>     expand scale relative to the query length ($expand)
+                       e.g., 1kb query, 1kb x $expand extened from both sides will be scanned for the hit range
+    --prefix <str>     the output directory and the prefix for output files (default is --qrygene)
+    --threads <num>    number of cpus ($threads)
+    --bandcol <str>    a valid R color name ($bandcol)
+    --version          version information
+    --help             help information.
+EOF
+exit;
+}
+
+###############################################
+# parameters:
+###############################################
+my %opts = ();
+my ($query, $db);
+
+&GetOptions(\%opts, "qrygene=s", "qryisoform=s",
+                    "qrydir=s", "qrybase=s",
+                    "tgtdir=s", "tgtbase=s",
+                    "strand=s", "ext5=i", "ext3=i",
+					"tchr=s", "tstart=i", "tend=i",
+					"identity=i", "match=i", "coverage=i", "evalue=i",
+					"repeatdust", "expand=i",
+                    "prefix=s", "threads=i", "bandcol=s",
+                    "version", "help");
+
+if (exists $opts{version}) {
+	print "$version\n";
+	exit;
+}
+
+my ($qrygene, $qrydir, $qrybase, $tgtdir, $tgtbase);
+&prompt if exists $opts{help} or !%opts;
+if (!exists $opts{qrygene} or !exists $opts{qrydir} or !exists $opts{qrybase} or !exists $opts{tgtdir} or !exists $opts{tgtbase}) {
+	print STDERR RED, "--qrygene, --qrydir, --qrybase, --tgtdir, and --tgtbase are required\n", RESET;
+	&prompt;
+} else {
+	$qrygene = $opts{qrygene};
+	$qrydir = $opts{qrydir};
+	$qrybase = $opts{qrybase};
+	$tgtdir = $opts{tgtdir};
+	$tgtbase = $opts{tgtbase};
+}
+
+my $target_chr = $opts{tchr} if exists $opts{tchr};
+
+### check query DBs
+# fasta, gtf, te, cds.fasta, cdna.fasta, protein.fasta
+my $qry_genome = $qrydir."/".$qrybase.".fasta";
+my $qry_gtf = $qrydir."/".$qrybase.".gtf";
+my $qry_te = $qrydir."/".$qrybase.".TE.gff3";
+my $qry_cds = $qrydir."/".$qrybase.".cds.fasta";
+my $qry_cdna = $qrydir."/".$qrybase.".cdna.fasta";
+my $qry_protein = $qrydir."/".$qrybase.".protein.fasta";
+&is_file_exist($qry_genome, "Query genome", 1);
+&is_file_exist($qry_gtf, "Query GTF", 1);
+&is_file_exist($qry_te, "Query TE", 1);
+&is_file_exist($qry_cds, "Query cds", 0);
+&is_file_exist($qry_cdna, "Query cdna", 0);
+&is_file_exist($qry_protein, "Query protein", 0);
+
+### check target DBs
+my $tgt_genome = $tgtdir."/".$tgtbase.".fasta";
+my $tgt_blast = $tgt_genome.".nhr";
+my $tgt_gtf = $tgtdir."/".$tgtbase.".gtf";
+my $tgt_te = $tgtdir."/".$tgtbase.".TE.gff3";
+my $tgt_cds = $tgtdir."/".$tgtbase.".cds.fasta";
+my $tgt_cdna = $tgtdir."/".$tgtbase.".cdna.fasta";
+my $tgt_protein = $tgtdir."/".$tgtbase.".protein.fasta";
+&is_file_exist($tgt_blast, "Target blast+ DB", 1);
+&is_file_exist($tgt_genome, "Target genome", 1);
+&is_file_exist($tgt_gtf, "Target GTF", 1);
+&is_file_exist($tgt_te, "Target TE", 0);
+&is_file_exist($tgt_cds, "Target cds", 0);
+&is_file_exist($tgt_cdna, "Target cdna", 0);
+&is_file_exist($tgt_protein, "Target protein", 0);
+
+if (exists $opts{strand}) {
+	if (($opts{strand} ne "+") and ($opts{strand} ne "-") and ($opts{strand} ne "plus") and ($opts{strand} ne "minus") and ($opts{strand} ne "auto")) {
+		print STDERR "$opts{strand}\n";
+		print STDERR RED, "--strand must be auto, plus, +, minus, or -\n", RESET;
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	} elsif ($opts{strand} eq "+") {
+		$strand = "plus";
+	} elsif ($opts{strand} eq "-") {
+		$strand = "minus";
+	} else {
+		$strand = $opts{strand};
+	}
+}
+
+my $qryisoform = $opts{qryisoform} if exists $opts{qryisoform};
+$ext5 = $opts{ext5} if exists $opts{ext5};  
+$ext3 = $opts{ext3} if exists $opts{ext3};
+$evalue = $opts{evalue} if exists $opts{evalue};
+$identity = $opts{identity} if exists $opts{identity};
+$match = $opts{match} if exists $opts{match};
+$coverage = $opts{coverage} if exists $opts{coverage};
+$expand = $opts{expand} if exists $opts{expand};
+if (exists $opts{prefix}) {
+	$prefix = $opts{prefix};
+} else {
+	$prefix = $qrygene;
+}
+$threads = $opts{threads} if exists $opts{threads};
+$bandcol = $opts{bandcol} if exists $opts{bandcol};
+
+###############################################
+# preparation
+###############################################
+# create a directory for outputs
+if (-d $prefix) {
+	print STDERR RED, "Warning: the directory $prefix exists.\n", RESET;
+} else {
+	`mkdir $prefix`;
+}
+
+
+# script path:
+my $scriptPath = $FindBin::Bin;
+my $utilsPath = $scriptPath."/utils/";
+
+&runreport("Start to run homomine");
+
+###############################################
+# check requirments
+###############################################
+&cmd_check("java");
+&cmd_check("muscle");
+&cmd_check("blastn");
+&cmd_check("nucmer");
+&cmd_check("R");
+&cmd_check("bedtools");
+&cmd_check("awk");
+&cmd_check("blastdbcmd");
+&cmd_check("delta-filter");
+&cmd_check("show-coords");
+
+&runreport("Requirement checked");
+
+###############################################
+# intermediate output
+###############################################
+# query gene DB
+my $qry_data_prefix = $prefix."/1_".$qrybase."_".$qrygene;
+
+# homocomp
+my $gene2target_homocomp = $prefix."/2_".$qrygene."_to_".$tgtbase;
+
+# target gene DB
+my $tgt_data_prefix = $prefix."/3_".$tgtbase."_gene";
+
+# pair2var via MSA
+my $seqpair2var_dir = $prefix."/4_".$qrybase."_".$tgtbase."_var";
+
+# report dir
+my $report_dir = = $prefix."/5_".$qrygene."_to_".$tgtbase."_output";
+
+###############################################
+# geneseq the query gene
+###############################################
+&runreport("Extract query gene information");
+`perl $utilsPath/homomine_geneseq \\
+	--fas $qry_genome \\
+	--gene $qrygene \\
+	--gtf $qry_gtf \\
+	--prefix $qry_data_prefix \\
+	--ext5 $ext5 --ext3 $ext3 \\
+	--te $qry_te --cds $qry_cds \\
+	--cdna $qry_cdna --protein $qry_protein`;
+
+###############################################
+# search target genome - homocomp
+###############################################
+&runreport("Search the target genome");
+
+# gene sequence:
+my $qrygene_seqfile = $qry_data_prefix."/1.".$qrygene.".fasta";
+if (!-f $qrygene_seqfile) {
+	print STDERR RED, "Error: $qrygene_seqfile does not exist.\n", RESET;
+	exit;
+}
+
+# isoform
+my $isoform_bedfile;
+if ( !exists $opts{qryisoform}) {
+	$isoform_bedfile = `ls -1 $qry_data_prefix/4*/*bed | head -n 1`;
+	chomp $isoform_bedfile;
+} else {
+	$isoform_bedfile = `ls -1 $qry_data_prefix/4*/$qryisoform*bed`;
+	chomp $isoform_bedfile;
+	if (!-f $isoform_bedfile) {
+		print STDERR RED, "Error: $isoform_bedfile does not exist.\n", RESET;
+		exit;
+	}
+}
+
+### run comparison
+`perl $utilsPath/homomine_comp \\
+	--query $qrygene_seqfile \\
+	--qrygene $qrygene \\
+	--qryadd $isoform_bedfile \\
+	--db $tgt_genome \\
+	--dbacc $tgtbase \\
+	--ref $tgt_genome \\
+	--tgtf $tgt_gtf \\
+	--evalue $evalue \\
+	--identity $identity \\
+	--match $match \\
+	--coverage $coverage \\
+	--repeatdust \\
+	--expand $expand \\
+	--prefix $gene2target_homocomp \\
+	--threads $threads \\
+	--bandcol $bandcol`;
+
+###############################################
+# geneseq the target gene
+###############################################
+&runreport("Extract target gene information");
+#my $tgt_gene_file = $gene2target_homocomp."/4c.target.posadj.annotation/selected_feature";
+my $tgt_gene_file = $gene2target_homocomp."/hit.output";
+if (-f $tgt_gene_file) {
+	open(TARGETGENE, "<", $tgt_gene_file) || die;
+	my ($target_chr, $target_start, $target_end, $target_strand);
+	my ($target_gene, $target_transcript);
+	while (<TARGETGENE>) {
+		chomp;
+		my @tline = split(/\t/, $_);
+		if ($tline[0] eq "gene" ) {
+			$target_gene = $tline[1];
+		} elsif ($tline[0] eq "trancript" ) {
+			$target_transcript = $tline[1];
+		}
+	}
+	close TARGETGENE;
+	
+	if ($target_gene ne "") {
+		`perl $utilsPath/homomine_geneseq \\
+			--fas $tgt_genome \\
+			--gene $target_gene \\
+			--gtf $tgt_gtf \\
+			--prefix $tgt_data_prefix \\
+			--te $tgt_te --cds $tgt_cds \\
+			--cdna $tgt_cdna --protein $tgt_protein`;
+	} else {
+		&runreport("No genes identified in the target genome");
+	}
+} else {
+	&runreport("No genes identified in the target genome");
+}
+
+###############################################
+# polymorphism
+###############################################
+# $qrygene_seqfile
+my $tgtgene_seqfile = $gene2target_homocomp."/".$qrygene."_".$tgtbase.".4.target.fas";
+my $seqpair2var_prefix = "1_polymorphism";
+`perl $utilsPath/homomine_seqpair2var \\
+	--ref $qrygene_seqfile \\
+	--refgeno $qrybase \\
+	--qry $tgtgene_seqfile \\
+	--qrygeno $tgtbase \\
+	--outdir $seqpair2var_dir \\
+	--prefix $seqpair2var_prefix`;
+
+&runreport("Polymorphisms identified");
+
+###############################################
+# snpeff
+###############################################
+my $vcf = $seqpair2var_dir."/".$seqpair2var_prefix.".2.vcf";
+my $qrygene_gtf_dir = $qry_data_prefix."/4\.".$qrygene.".pos.adjusted.gtf.bed";
+
+if (-d $qrygene_gtf_dir) {
+	my $gtf_count = 1;
+	my @gene_gtf_files = glob("$qrygene_gtf_dir/*adjusted\.gtf");
+	foreach my $gene_gtf_file (@gene_gtf_files) { 
+		$gtf_count++;
+		my $transcript = $gene_gtf_file;
+		$transcript =~ s/.*\///g;
+		$transcript =~ s/\.adjusted\.gtf//g;
+		my $snpeff_prefix = $gtf_count."_".$transcript;
+	    `perl $utilsPath/homomine_snpeff \\
+			--vcf $vcf \\
+			--ref $qrygene_seqfile \\
+			--gtf $gene_gtf_file \\
+			--outdir $seqpair2var_dir \\
+			--prefix $snpeff_prefix`;
+	}
+}
+&runreport("SNPEff done");
+
+###############################################
+# report output
+###############################################
+if (!-d $report_dir) {
+	`mkdir $report_dir`;
+}
+
+# Rmd
+my $rmd = $utilsPath."/homomine.report.Rmd";
+
+#html report:
+my $report_datadir = $report_dir."/data"
+my $report_figuredir = $report_dir."/figures";
+
+if (! -d $report_figuredir) {
+	`mkdir $report_figuredir`;
+}
+
+my $cwd = $prefix; # current directory
+
+# query BED
+my $qrybed = $report_datadir."/".$qrybase.".label.bed";
+my $qry_te_bedfile xxxxx
+if (-d $qry_te_bedfile) {
+	`cat $isoform_bedfile $qry_te_bedfile > $qrybed`;
+} else {
+	`cp $isoform_bedfile > $qrybed`;
+}
+
+# target gene:
+
+my $tgtgene = ???
+# target BED
+my $tgtbed = $report_datadir."/".$tgtbase.".label.bed";
+my $tgt_te_bedfile xxx
+my $tgt_te_bedfile xxx
+if (-d $tgt_te_bedfile) {
+	`cat $tgt_isoform_bedfile $tgt_te_bedfile > $tgtbed`;
+} else {
+	`cp $tgt_isoform_bedfile > $tgtbed`;
+}
+
+# snpeff (HIGH and MODERATE)
+
+
+
+my $htmlout = $prefix."homomine.report.html";
+my $tmpRscript = $prefix."/homomine_X_Rmd.render.R";
+open(TMPR, ">$tmpRscript") || die;
+print TMPR "library\(rmarkdown\)\n";
+print TMPR "library\(knitr\)\n";
+print TMPR "\n";
+print TMPR "render\(\'$rmd\',\n";
+print TMPR "  params = list(\n";
+print TMPR "    cwd=\"$cwd\",\n";
+print TMPR "    scriptdir=\"$utilsPath\",\n";
+print TMPR "    qrygene=\"$qrygene\",\n";
+print TMPR "    qrybase=\"$qrybase\",\n";
+print TMPR "    tgtbase=\"$tgtbase\",\n";
+print TMPR "    qrybed=\"$qrybed\",\n";
+print TMPR "    tgtbed=\"$tgtbed\",\n";
+print TMPR "    xxx=\"$xxx\x\",\n";
+print TMPR "    xxx=\"$xxx\x\",\n";
+print TMPR "  knit_root_dir=getwd\(\),\n";
+print TMPR "  output_dir=\"$reportdir\"\),\n";
+print TMPR "  output_format=\"html_document\",\n";
+print TMPR "  output_file=\"$htmlout\"\)\n";
+close TMPR;
+
+# run
+`Rscript $tmpRscript`;
+#`rm $tmpRscript`;
+
+
+
+###############################################
+# module 1: check command availability
+###############################################
+sub cmd_check {
+	my $cmd = shift;
+	my $cmdPath=`which $cmd 2>/dev/null`;
+	if (!$cmdPath) {# not founded
+		print STDERR RED, "  $cmd is not found\n", RESET;
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	}
+}
+
+###############################################
+# module 2: report running result
+###############################################
+# funtion to report running return
+sub runreport {
+	my $injob = shift;
+    my $dateinfo = `date +'o %Y-%m-%d %H:%M:%S'`;
+	print STDERR MAGENTA, "$dateinfo", RESET;
+	print STDERR "  $injob.\n";
+	#print LOG "$dateinfo  ";    
+	#print LOG "  $injob.\n";
+}
+
+###############################################
+# module 3: check if a file exists
+###############################################
+sub is_file_exist {
+	my ($infile, $innote, $is_exit) = @_;
+	if (!-f $infile) {
+		&runreport($innote." ".$infile." does not exist");
+		print STDERR RED, "Exit\n", RESET;
+		exit if $is_exit;
+	}
+}
+

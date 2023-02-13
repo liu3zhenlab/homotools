@@ -4,7 +4,6 @@ dev
 case
 hpout
 homovg_dev
-homomine
 homograph_dev
 oldversion
 version_replace.sh
