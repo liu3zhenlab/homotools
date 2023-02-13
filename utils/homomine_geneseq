@@ -113,7 +113,7 @@ while (<GTF>) {
 					}
 				}
 			} elsif ($gene_found) { # when gene name does not match input gene name
-				&runreport("Gene was found in GTF");
+				#&runreport("Gene was found in GTF");
 				last;
 			}
 		}
@@ -173,9 +173,8 @@ if ((!$chromosome_found) and ($seq_name eq $chromosome)) {
 }
 close FAS;
 
-if ($chromosome_found) {
-	&runreport("chromosome/target sequence found");	
-} else {
+if (!$chromosome_found) {
+	#&runreport("chromosome/target sequence found");	
 	print STDERR RED, "no chromosome/target sequence found\n", RESET;
 	exit;
 }
@@ -216,7 +215,7 @@ close GENEFAS;
 # fasta length
 `perl $utilsPath/fastaSize.pl $gene_fas_out > $gene_len_out`;
 
-&runreport("  Gene sequence produced");
+#&runreport("  Gene sequence produced");
 
 ############################################
 # output sequences with exon/cds highlighted
@@ -231,7 +230,7 @@ foreach my $each_abed (@all_adjusted_bed) {
 	my $highlighed_fas_out = $others_dir."/".$transcript_name.".highlighted.fasta";
 	seqhighlight::seqhighlight($gene_fas_out, $each_abed, $highlighed_fas_out, $transcript_name);
 }
-&runreport("  sequences with exon/cds highlights generated");
+#&runreport("  sequences with exon/cds highlights generated");
 
 ###########################################
 # TE GFF
@@ -240,7 +239,7 @@ if (-f $te_gff) {
 	my $gene_te_gff = $others_dir."/".$gene.".TE.gff3";
 	`bedtools intersect -a $te_gff -b $ori_bed_out -nonamecheck > $gene_te_gff`;
 	gffadjust::gffadjust($others_dir, $gene_te_gff, $gene_start, $gene);
-	&runreport("  TE GFF produced");
+	#&runreport("  TE GFF produced");
 }
 
 ###########################################
@@ -250,21 +249,21 @@ if (-f $te_gff) {
 if (-f $cds_file) {
 	my $cds_out_file = $others_dir."/".$gene.".cds.fasta";
 	&seqextract($cds_file, $gene, $cds_out_file);
-	&runreport("  cds sequences extracted");
+	#&runreport("  cds sequences extracted");
 }
 
 # cdna
 if (-f $cdna_file) {
 	my $cdna_out_file = $others_dir."/".$gene.".cdna.fasta";
 	&seqextract($cdna_file, $gene, $cdna_out_file);
-	&runreport("  cdna/trancript sequences extracted");
+	#&runreport("  cdna/trancript sequences extracted");
 }
 
 # protein
 if (-f $protein_file) {
 	my $protein_out_file = $others_dir."/".$gene.".protein.fasta";
 	&seqextract($protein_file, $gene, $protein_out_file);
-	&runreport("  protein sequences extracted");
+	#&runreport("  protein sequences extracted");
 }
 
 ###########################################

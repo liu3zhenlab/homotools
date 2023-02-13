@@ -349,7 +349,7 @@ if (!exists $opts{noblastn}) {
 	}
 	close IN;
 	&runreport("  hit range is $best_hit_chr:$hit_start-$hit_end");
-	print STDERR "  - hit searching is within $scan_start:$scan_end\n";
+	print STDERR "  - hit searching is within $scan_start-$scan_end\n";
 	$target_chr = $best_hit_chr;
 
 ###############################################

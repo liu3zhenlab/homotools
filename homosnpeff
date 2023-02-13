@@ -13,10 +13,7 @@ use Getopt::Long;
 use File::Temp;
 use FindBin;
 use Term::ANSIColor qw(:constants);
-use FindBin;
-use lib "$FindBin::Bin/lib";
-use genegtfadjust;
-use maxbed;
+#use lib "$FindBin::Bin/lib";
 
 my $version = "0.2.3";
 

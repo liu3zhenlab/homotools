@@ -1,0 +1,225 @@
+#!/usr/bin/perl -w
+# ====================================================================================================
+# File: homomine_seqpair2var.pl
+# Author: Sanzhen Liu
+# Date: 2/8/2023
+# ====================================================================================================
+
+use strict;
+use warnings;
+use Getopt::Long;
+
+my $help;
+my $refgeno = "refgeno";
+my $qrygeno = "altgeno";
+my $pos_adj = 1;
+my $outdir = ".";
+my $prefix = "spv";
+my $absence_char = "-";
+
+sub prompt {
+    print <<EOF;
+    Usage: perl $0 --ref <fasta> --qry <fasta> [options]
+    --ref <file>    : fasta of a reference sequence; required
+    --refgeno <str> : genotype of ref; optional
+    --qry <file>    : fasta of a query sequence; required
+    --qrygeno <str> : genotype of ref; optional
+    --outdir <str>  : path to outputs ($outdir)
+    --prefix <str>  : output prefix ($prefix)
+    --posadj <num>  : position adjust by adding this number and substracting 1 ($pos_adj)
+    --help          : help information
+EOF
+exit;
+}
+
+# read parameters:
+my ($ref, $qry);
+&GetOptions("ref=s"     => \$ref,
+			"refgeno=s" => \$refgeno,
+			"qry=s"     => \$qry,
+			"qrygeno=s" => \$qrygeno,
+			"outdir=s"  => \$outdir,
+			"prefix=s"  => \$prefix,
+			"posadj=i"  => \$pos_adj,
+			"help|h"    => \$help) || &prompt;
+
+if ($help) { &prompt; }
+
+### check required input
+if (!defined $ref or !defined $qry) {
+	print STDERR "--ref and --qry are required\n";
+	exit;
+}
+
+### check --outdir
+if (($outdir ne ".") and (!-f $outdir)) {
+	`mkdir $outdir`;
+}
+
+### generate MSA via muscle
+my $msa = $outdir."/".$prefix.".1.msa";
+`cat $ref $qry | muscle -in - -out $msa -quiet`;
+
+### read alignment fasta data
+my ($seq, $seqname, $refname, $len, %seqhash, %lenhash);
+my (@seqnames, @seqlen);
+open(IN, $msa) || die;
+while (<IN>) {
+	chomp;
+	if (/^>(\S+)/) {
+		if (defined $seqname) {
+			$seqhash{$seqname} = $seq;
+			$lenhash{$seqname} = $len;
+			push(@seqlen, $len);
+		} else {
+			$refname = $1; # 1st one is ref
+		}
+    	$seqname = $1;
+		push(@seqnames, $seqname);
+		$seq = "";
+		$len = 0;
+ 	 } else {
+		$seq .= $_;
+		$len += length($_);
+	}
+}
+# last element:
+$seqhash{$seqname} = $seq;
+$lenhash{$seqname} = $len;
+push(@seqlen, $len);
+close IN;
+
+### process aln fasta data
+my (%ref_base, @ref_base, %ref_pos, %refpos2alnpos);
+my %alt_base;
+my %all_uniq_base;
+foreach my $eachseq (@seqnames) {
+	my $count = 0;
+	if ($eachseq eq $refname) {
+		my $ref_pos = $pos_adj - 1;
+		@ref_base = split(//, $seqhash{$refname});
+		foreach (@ref_base) {
+			if ($_ ne $absence_char) {
+				$ref_pos++;
+				$refpos2alnpos{$ref_pos} = $count + 1;
+			}
+			$count++;
+			$ref_base{$count} = $_;
+			$ref_pos{$count} = $ref_pos;
+			$all_uniq_base{$count}{$_}++;
+		}
+	} else {
+		my @alt_base = split(//, $seqhash{$eachseq});
+		foreach (@alt_base) {
+			$count++;
+			$alt_base{$count}{$eachseq} = $_;
+			$all_uniq_base{$count}{$_}++;
+		}
+	}
+}
+
+# identify polymorphic sites:
+my $seqlen = $seqlen[0];
+my %polymorphic_site_ref;
+my %polymorphic_site_alt;
+for (my $pos=1; $pos<=$seqlen; $pos++) {
+	my %cur_bases = %{$all_uniq_base{$pos}};
+	my @cur_bases = keys %cur_bases;
+	if ($#cur_bases > 0) { # polymorphic sites
+		foreach my $eseqname (@seqnames) {
+			if ($eseqname ne $refname) {
+				my $cur_alt_base = $alt_base{$pos}{$eseqname};
+				if ($cur_alt_base ne $ref_base{$pos}) {
+					$polymorphic_site_ref{$eseqname}{$ref_pos{$pos}} .= $ref_base{$pos};
+					$polymorphic_site_alt{$eseqname}{$ref_pos{$pos}} .= $cur_alt_base;
+				}
+			}
+		}
+	}
+}
+
+###########################
+# genotyping by sample
+###########################
+# VCF output
+my $vcfout = $outdir."/".$prefix.".2.vcf";
+open(VCF, ">", $vcfout) || die;
+print VCF "##fileformat=VCFv4.2\n";
+my $datestring = localtime();
+print VCF "##$datestring\n";
+#print "SEQ\tPOS\tREF\tALT\n";
+print VCF "#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\t$refgeno\t$qrygeno\n";
+foreach my $eseqname (@seqnames) {
+	if ($eseqname ne $refname) {
+		if (exists $polymorphic_site_ref{$eseqname}) {
+			my %epolymorph_ref = %{$polymorphic_site_ref{$eseqname}};
+			my %epolymorph_alt = %{$polymorphic_site_alt{$eseqname}};
+			my @poly_refpos = sort {$a <=> $b} keys %epolymorph_ref;
+			my $previous_pos = $poly_refpos[0];
+			my $previous_ref = "";
+			my $previous_alt = "";
+			my $cur_ref = "";
+			my $cur_alt = "";
+			my $varorder = 1;
+			for (my $i=0; $i<=$#poly_refpos; $i++) {
+				my $cur_ref_base = $epolymorph_ref{$poly_refpos[$i]};
+				my $cur_alt_base = $epolymorph_alt{$poly_refpos[$i]};
+				$cur_ref .= $cur_ref_base;
+				$cur_alt .= $cur_alt_base;
+				
+				if (exists $epolymorph_ref{$poly_refpos[$i] + 1}) { # neighboring polymorphism exists
+					$previous_ref = $cur_ref;
+					$previous_alt = $cur_alt;
+				} else {
+					$cur_ref =~ s/^\-+$/\./g;
+					$cur_ref =~ s/\-+//g;
+					$cur_alt =~ s/^\-+$/\./g;
+					$cur_alt =~ s/\-+//g;
+					#print "$refname\t$previous_pos\t$cur_ref\t$cur_alt\n";
+					# 20 14370 rs6054257 G A 29 PASS NS=3;DP=14;AF=0.5;DB;H2 GT 0|0 1|1
+						
+					### replace "." with REF base:
+					if ($cur_ref eq ".") { # ins
+						if ($previous_pos == 0) {
+							$previous_pos = 1;
+							my $count_pos = $refpos2alnpos{1};
+							$cur_ref = $ref_base[$count_pos - 1];
+							$cur_alt = $cur_alt.$cur_ref;
+						} else {
+							my $count_pos = $refpos2alnpos{$previous_pos};
+							$cur_ref = $ref_base[$count_pos - 1];
+							$cur_alt = $cur_ref.$cur_alt;
+						}
+					}
+					
+					if ($cur_alt eq ".") { # del
+						my $count_pos = $refpos2alnpos{$previous_pos};
+						if ($previous_pos == 1) {
+							my $cur_ref_len = length($cur_ref);
+							$cur_alt = $ref_base[$count_pos + $cur_ref_len - 2];
+							$cur_ref .= $cur_alt;
+						} else {
+							$previous_pos -= 1;
+							$cur_alt = $ref_base[$count_pos - 2];
+							$cur_ref = $cur_alt.$cur_ref;
+						}
+					}
+					#print "$refname\t$previous_pos\t$varorder\t$cur_ref\t$cur_alt\t.\t.\t.\tGT\t0\|0\t1\|1\n";
+					print VCF "$refname\t$previous_pos\t$varorder\t$cur_ref\t$cur_alt\t.\t.\t.\tGT\t0\|0\t1\|1\n";
+					$varorder++;
+					$previous_ref = "";
+					$previous_alt = "";
+					$cur_ref = "";
+					$cur_alt = "";
+					if ($i < $#poly_refpos) {
+						$previous_pos = $poly_refpos[$i + 1];
+					}
+				}
+			}
+		}
+	}
+}
+
+
+#########################################################
+

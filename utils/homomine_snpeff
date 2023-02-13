@@ -1,0 +1,164 @@
+#!/usr/bin/perl -w
+#======================================================================
+# homomine_snpeff
+# Author: Sanzhen Liu <liu3zhen@ksu.edu>
+# 2/11/2023
+#
+# The Perl script to evalue effects of variants
+#======================================================================
+
+use strict;
+use warnings;
+use Getopt::Long;
+use File::Temp;
+use FindBin;
+use Term::ANSIColor qw(:constants);
+#use lib "$FindBin::Bin/lib";
+use Cwd;
+use Cwd 'abs_path';
+
+my $outdir = ".";
+my $prefix = "homosnpeff";
+my $identity = 95;
+my $match = 100;
+
+sub prompt {
+    print <<EOF;
+    Usage: perl $0 --vcf <vcf> --ref <fasta> --gtf <gtf> [options]
+    [Options]
+    --vcf <file>    VCF input; required
+    --ref <file>    fasta file of the reference sequence; required
+    --gtf <file>    gtf annotation for the reference sequence; required
+    --outdir <str>  the output directory ($outdir)
+    --prefix <str>  the prefix for output files ($prefix)
+    --help:         help information
+EOF
+exit;
+}
+
+###############################################
+#d parameters:
+###############################################
+my %opts = ();
+my ($vcf, $ref, $gtf);
+
+&GetOptions(\%opts, "vcf=s", "ref=s", "gtf=s",
+                    "outdir=s", "prefix=s", "help");
+
+&prompt if exists $opts{help} or !%opts;
+if (!exists $opts{vcf} or !exists $opts{ref} or !exists $opts{gtf}) {
+	print STDERR RED, "Both --vcf, --ref, and --gtf are required\n", RESET;
+	&prompt;
+} else {
+	$vcf = $opts{vcf};
+	$ref = $opts{ref};
+	$gtf = $opts{gtf};
+}
+
+$outdir = $opts{outdir} if exists $opts{outdir};
+$prefix = $opts{prefix} if exists $opts{prefix};
+
+###############################################
+# preparation
+###############################################
+# script path:
+my $scriptPath = $FindBin::Bin;
+my $libPath = $scriptPath."/../lib/";
+$libPath = &abs_path($libPath);
+
+my $cwd = getcwd(); # current directory
+
+# create a directory for outputs
+if (-d $outdir) {
+	if ($outdir ne ".") {
+		print STDERR RED, "Warning: the directory $outdir exists.\n", RESET;
+	}
+} else {
+	`mkdir $outdir`;
+}
+
+$vcf = &fullpathfile($vcf);
+$ref = &fullpathfile($ref);
+$gtf = &fullpathfile($gtf);
+
+# go to --outdir
+chdir $outdir;
+
+my $data_dir = "data";
+if (-d $data_dir) {
+	`rm -rf $data_dir`;
+}
+
+`mkdir $data_dir`;
+`mkdir $data_dir/ref`;
+
+###############################################
+# snpEff
+###############################################
+# prep for snpEff
+`cp $ref $data_dir/ref/sequences.fa`;
+`cp $gtf $data_dir/ref/genes.gtf`;
+`cp $libPath/snpEff/snpEff.jar .`;
+`cp $libPath/snpEff/snpEff.config .`;
+`java -jar snpEff.jar build -dataDir $data_dir -c snpEff.config ref`;
+
+# snpEff
+`java -jar snpEff.jar eff ref $vcf > $prefix.vcf.eff`;
+&runreport("snpEff finished");
+
+###############################################
+# cleanup
+###############################################
+if (-f "snpEff_summary.html") {
+	`mv snpEff_summary.html $prefix.snpEff_summary.html`;
+}
+if (-f "snpEff_genes.txt") {
+	`rm snpEff_genes.txt`;
+}
+`rm snpEff.config`;
+`rm snpEff.jar`;
+`rm -rf $data_dir`;
+
+### go back to working directory
+chdir $cwd;
+
+###############################################
+# module 1: check command availability
+###############################################
+sub cmd_check {
+	my $cmd = shift;
+	my $cmdPath=`which $cmd 2>/dev/null`;
+	if (!$cmdPath) {# not founded
+		print STDERR RED, "  $cmd is not found\n", RESET;
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	}
+}
+
+###############################################
+# module 2: report running result
+###############################################
+# funtion to report running return
+sub runreport {
+	my $injob = shift;
+    my $dateinfo = `date +'o %Y-%m-%d %H:%M:%S'`;
+	print STDERR MAGENTA, "$dateinfo", RESET;
+	print STDERR "  $injob.\n";
+}
+
+###############################################
+# check a file and covert to absolute path
+###############################################
+sub fullpathfile {
+	my $infile = shift;
+	my $outfile;
+	if (-f $infile) {
+		$outfile = abs_path($infile);
+	} else {
+		print STDERR MAGENTA, "$infile does not exist\n", RESET;
+		exit;
+	}
+	return $outfile;
+}
+
+
