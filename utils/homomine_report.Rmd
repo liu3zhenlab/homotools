@@ -72,16 +72,22 @@ tgt_data <- read.delim(tgthit)
 kable(tgt_data)
 ```
 
+```{r match, echo=F, comment=""}
+qt_data <- rbind(qry_data[, 1:5], tgt_data[, 1:5])
+qt_data$genome <- c(qrybase, tgtbase)
+qt_data_outfile <- paste0(cwd, "/", qrygene, "/", qrygene, "_", tgtbase, ".homo.txt")
+write.table(qt_data, qt_data_outfile, row.names=F, quote=F, sep="\t")
+```
 
 #### Virsualization of Nucmer alignments
-```{r comp, echo=F, comment="", fig.height=3, fig.width=6, fig.cap="Fig 1. Nucmer plot"}
+```{r comp, echo=F, comment="", fig.height=3, fig.width=6, fig.cap="Fig 1. Nucmer alignment."}
 source(paste0(scriptdir, "/homomine_nucmerplot.R"))
 outpdf <- "test.pdf"
 homomine_nucmerplot(datafile=nucmeraln, qrybed=qrybed, tgtbed=tgtbed,
                     outpath=figuredir, ispdf=F, imageoutfile=outpdf)
 ```
+Nucmer was used to align sequences of the two genomes. Only uniquely aigned regions are displayed. Green: repetitive sequences; light blue: UTRs; blue: exons.
 
-
-```{r polymorphism, echo=F, comment="", fig.height=3, fig.width=6, fig.cap="Fig 2. t"}
+```{r polymorphism, echo=F, comment="", fig.height=3, fig.width=6, fig.cap="Fig 2"}
 
 ```

@@ -375,6 +375,7 @@ if (!-d $report_datadir) {
 }
 
 my $cwd = &abs_path("."); # current directory
+my $report_dir = $cwd."/".$qrygene;
 
 # query input
 my $qry_gene_info_bed = $qry_data_prefix."/3.".$qrygene.".original.bed";
@@ -473,14 +474,14 @@ print TMPR "    figuredir=\"$report_figuredir\",\n";
 print TMPR "    qryinput=\"$report_qry_input\",\n";
 print TMPR "    nucmeraln=\"$report_nucmer_alnfile\"\),\n";
 print TMPR "  knit_root_dir=\"$cwd\",\n";
-print TMPR "  output_dir=\"$cwd\",\n";
+print TMPR "  output_dir=\"$report_dir\",\n";
 print TMPR "  output_format=\"html_document\",\n";
 print TMPR "  output_file=\"$htmlout\"\)\n";
 close TMPR;
 
 
 # run
-#`Rscript $tmpRscript`;
+`Rscript $tmpRscript`;
 #`rm $tmpRscript`;
 
 ###############################################

@@ -201,6 +201,6 @@ Please report any bugs or suggestion on github or by email to Sanzhen Liu ([liu3
 The package homotools is distributed under MIT licence.
 
 ## versions
-# 0.2.3: allow an automatic choice for strand (plus or minus) in homocomp
+0.2.3: allow an automatic choice for strand (plus or minus) in homocomp
 
 
