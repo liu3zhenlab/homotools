@@ -1,0 +1,87 @@
+---
+title: "homomine report"
+author: "Sanzhen Liu"
+date: "2/12/2023"
+params:
+  cwd: NUL
+  scriptdir: NULL
+  qrygene: NULL
+  qrybase: NULL
+  qrybed: NULL
+  tgtbase: NULL
+  tgtgene: NULL
+  tgtbed: NULL
+  tgthit: NULL
+  datadir: NULL
+  figuredir: NULL
+  qryinput: NULL
+  nucmeraln: NULL
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r parameters, echo = FALSE}
+qrygene <- params$qrygene
+cwd <- params$cwd
+scriptdir <- params$scriptdir
+qrygene <- params$qrygene
+qrybase <- params$qrybase
+qrybed <- params$qrybed
+tgtgene <- params$tgtgene
+tgtbase <- params$tgtbase
+tgthit <- params$tgthit
+tgtbed <- params$tgtbed
+tgthit <- params$tgthit
+datadir <- params$datadir
+figuredir <- params$figuredir
+qryinput <- params$qryinput
+nucmeraln <- params$nucmeraln
+```
+
+```{r setup, echo=F}
+library(knitr)
+#cwd="/homes/liu3zhen/scripts2/homotools/dev/test"
+#scriptdir="/homes/liu3zhen/scripts2/homotools/utils/"
+#qrygene="Zm00001eb320870"
+#qrybase="B73-5.0"
+#qrybed="Zm00001eb320870/5_Zm00001eb320870_to_A188v1_output/data/B73-5.0.label.bed"
+#tgtbase="A188v1"
+#tgtgene="Zm00056a037633"
+#tgtbed="Zm00001eb320870/5_Zm00001eb320870_to_A188v1_output/data/A188v1.label.bed"
+#tgthit="Zm00001eb320870/5_Zm00001eb320870_to_A188v1_output/data/Zm00001eb320870_to_A188v1.hit.output"
+#datadir="Zm00001eb320870/5_Zm00001eb320870_to_A188v1_output/data"
+#figuredir="Zm00001eb320870/5_Zm00001eb320870_to_A188v1_output/figures"
+#qryinput="Zm00001eb320870/5_Zm00001eb320870_to_A188v1_output/data/Zm00001eb320870_B73-5.0.search.input"
+#nucmeraln="Zm00001eb320870/5_Zm00001eb320870_to_A188v1_output/data/Zm00001eb320870_to_A188v1.uniq.filt.delta.txt"
+#knitr::opts_knit$set(root.dir = cwd)
+```
+
+Homomine report of `r qrygene`
+
+#### Basic information of `r qrygene` from `r qrybase`
+```{r qry, echo=F, comment=""}
+qry_data <- read.delim(qryinput)
+kable(qry_data)
+```
+
+#### Target hit in `r tgtbase`
+```{r target, echo=F, comment=""}
+tgt_data <- read.delim(tgthit)
+kable(tgt_data)
+```
+
+
+#### Virsualization of Nucmer alignments
+```{r comp, echo=F, comment="", fig.height=3, fig.width=6, fig.cap="Fig 1. Nucmer plot"}
+source(paste0(scriptdir, "/homomine_nucmerplot.R"))
+outpdf <- "test.pdf"
+homomine_nucmerplot(datafile=nucmeraln, qrybed=qrybed, tgtbed=tgtbed,
+                    outpath=figuredir, ispdf=F, imageoutfile=outpdf)
+```
+
+
+```{r polymorphism, echo=F, comment="", fig.height=3, fig.width=6, fig.cap="Fig 2. t"}
+
+```

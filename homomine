@@ -18,6 +18,7 @@ use lib "$FindBin::Bin/lib";
 #use genegtfadjust;
 #use maxbed;
 use Cwd;
+use Cwd 'abs_path';
 
 my $version = "0.2.3";
 
@@ -213,7 +214,7 @@ my $tgt_data_prefix = $prefix."/3_".$tgtbase."_gene";
 my $seqpair2var_dir = $prefix."/4_".$qrybase."_".$tgtbase."_var";
 
 # report dir
-my $report_dir = = $prefix."/5_".$qrygene."_to_".$tgtbase."_output";
+my $report_dir = $prefix."/5_".$qrygene."_to_".$tgtbase."_output";
 
 ###############################################
 # geneseq the query gene
@@ -279,25 +280,26 @@ if ( !exists $opts{qryisoform}) {
 &runreport("Extract target gene information");
 #my $tgt_gene_file = $gene2target_homocomp."/4c.target.posadj.annotation/selected_feature";
 my $tgt_gene_file = $gene2target_homocomp."/hit.output";
+my $tgt_gene = "";
+my $target_transcript = "";
 if (-f $tgt_gene_file) {
 	open(TARGETGENE, "<", $tgt_gene_file) || die;
 	my ($target_chr, $target_start, $target_end, $target_strand);
-	my ($target_gene, $target_transcript);
 	while (<TARGETGENE>) {
 		chomp;
 		my @tline = split(/\t/, $_);
 		if ($tline[0] eq "gene" ) {
-			$target_gene = $tline[1];
+			$tgt_gene = $tline[1];
 		} elsif ($tline[0] eq "trancript" ) {
 			$target_transcript = $tline[1];
 		}
 	}
 	close TARGETGENE;
 	
-	if ($target_gene ne "") {
+	if ($tgt_gene ne "") {
 		`perl $utilsPath/homomine_geneseq \\
 			--fas $tgt_genome \\
-			--gene $target_gene \\
+			--gene $tgt_gene \\
 			--gtf $tgt_gtf \\
 			--prefix $tgt_data_prefix \\
 			--te $tgt_te --cds $tgt_cds \\
@@ -358,45 +360,98 @@ if (!-d $report_dir) {
 }
 
 # Rmd
-my $rmd = $utilsPath."/homomine.report.Rmd";
+my $rmd = $utilsPath."/homomine_report.Rmd";
 
 #html report:
-my $report_datadir = $report_dir."/data"
+my $report_datadir = $report_dir."/data";
 my $report_figuredir = $report_dir."/figures";
 
-if (! -d $report_figuredir) {
+if (!-d $report_figuredir) {
 	`mkdir $report_figuredir`;
 }
 
-my $cwd = $prefix; # current directory
+if (!-d $report_datadir) {
+	`mkdir $report_datadir`;
+}
 
+my $cwd = &abs_path("."); # current directory
+
+# query input
+my $qry_gene_info_bed = $qry_data_prefix."/3.".$qrygene.".original.bed";
+my $report_qry_input = $report_datadir."/".$qrygene."_".$qrybase.".search.input";
+if (-f $qry_gene_info_bed) {
+	`echo -e "chr\tstart\tend\tstrand\tgene" >$report_qry_input`;
+	`awk '{ print \$1"\t"\$2+1"\t"\$3"\t"\$6"\t"\$4 }' $qry_gene_info_bed >> $report_qry_input`;
+} else {
+	print STDERR RED, "Warning: $qry_gene_info_bed does not exist.\n", RESET;
+}
 # query BED
 my $qrybed = $report_datadir."/".$qrybase.".label.bed";
-my $qry_te_bedfile xxxxx
-if (-d $qry_te_bedfile) {
+my $qry_te_bedfile = $qry_data_prefix."/5.".$qrygene.".others/".$qrygene.".TE.adjusted.bed";
+if (-f $qry_te_bedfile) {
 	`cat $isoform_bedfile $qry_te_bedfile > $qrybed`;
 } else {
-	`cp $isoform_bedfile > $qrybed`;
+	`cp $isoform_bedfile $qrybed`;
 }
 
-# target gene:
-
-my $tgtgene = ???
-# target BED
-my $tgtbed = $report_datadir."/".$tgtbase.".label.bed";
-my $tgt_te_bedfile xxx
-my $tgt_te_bedfile xxx
-if (-d $tgt_te_bedfile) {
-	`cat $tgt_isoform_bedfile $tgt_te_bedfile > $tgtbed`;
-} else {
-	`cp $tgt_isoform_bedfile > $tgtbed`;
+# target hit:
+my $tgthit = $gene2target_homocomp."/hit.output";
+my $report_tgthit = $report_datadir."/".$qrygene."_to_".$tgtbase.".hit.output";
+my $tgtbed = "empty";
+my $tgt_transcript = "empty";
+my (@hit_header, @hit_content);
+if ($tgt_gene ne "") {
+	# target BED
+	$tgtbed = $report_datadir."/".$tgtbase.".label.bed";
+	open(TGTHIT, "<", $tgthit) || die;
+	while(<TGTHIT>) {
+		chomp;
+		my @line = split(/\t/, $_);
+		push(@hit_header, $line[0]);
+		push(@hit_content, $line[1]);
+		if (/transcript\t(\S+)/) {
+			$tgt_transcript = $1;
+		}
+	}
+	close TGTHIT;
+	my $tgt_isoform_bedfile = $tgt_data_prefix."/4.".$tgt_gene.".pos.adjusted.gtf.bed/".$tgt_transcript.".adjusted.bed";
+	my $tgt_te_bedfile = $tgt_data_prefix."5.".$tgt_gene.".others/".$tgt_gene.".TE.adjusted.bed";
+	if (-d $tgt_te_bedfile) {
+		`cat $tgt_isoform_bedfile $tgt_te_bedfile > $tgtbed`;
+	} else {
+		`cp $tgt_isoform_bedfile $tgtbed`;
+	}
+	
+	# format hit data and add to report data
+	open (OUTHIT, ">", $report_tgthit) || die;
+	print OUTHIT join("\t", @hit_header);
+	print OUTHIT "\n";
+	if ($hit_content[3] eq "plus") {
+		$hit_content[3] = "+";
+	} elsif ($hit_content[3] eq "minus") {
+		$hit_content[3] = "-";
+	}
+	print OUTHIT join("\t", @hit_content);
+	print OUTHIT "\n";
+	close OUTHIT;
 }
 
-# snpeff (HIGH and MODERATE)
+### alignment
+#	Zm00001eb320870_A188v1.5f.uniq.filt.delta.txt
+my $nucmer_alnfile = $gene2target_homocomp."/".$qrygene."_".$tgtbase.".5f.uniq.filt.delta.txt";
+my $report_nucmer_alnfile = $report_datadir."/".$qrygene."_to_".$tgtbase.".uniq.filt.delta.txt";
+if (-f $nucmer_alnfile) {
+	`cp $nucmer_alnfile $report_nucmer_alnfile`;
+}
 
+# variant and snpeff (HIGH and MODERATE)
+#	3_Zm00001eb320870_T002.vcf.eff
+# $seqpair2var_dir
 
+#my $ori_vcfeff = $seqpair2var_dir."/3_".$.".vcf.eff";
+#my $filt_vcfeff = $report_datadir."/".
 
-my $htmlout = $prefix."homomine.report.html";
+my $htmlout = $prefix.".homomine.report.html";
 my $tmpRscript = $prefix."/homomine_X_Rmd.render.R";
 open(TMPR, ">$tmpRscript") || die;
 print TMPR "library\(rmarkdown\)\n";
@@ -408,22 +463,25 @@ print TMPR "    cwd=\"$cwd\",\n";
 print TMPR "    scriptdir=\"$utilsPath\",\n";
 print TMPR "    qrygene=\"$qrygene\",\n";
 print TMPR "    qrybase=\"$qrybase\",\n";
-print TMPR "    tgtbase=\"$tgtbase\",\n";
 print TMPR "    qrybed=\"$qrybed\",\n";
+print TMPR "    tgtbase=\"$tgtbase\",\n";
+print TMPR "    tgtgene=\"$tgt_gene\",\n";
 print TMPR "    tgtbed=\"$tgtbed\",\n";
-print TMPR "    xxx=\"$xxx\x\",\n";
-print TMPR "    xxx=\"$xxx\x\",\n";
-print TMPR "  knit_root_dir=getwd\(\),\n";
-print TMPR "  output_dir=\"$reportdir\"\),\n";
+print TMPR "    tgthit=\"$report_tgthit\",\n";
+print TMPR "    datadir=\"$report_datadir\",\n";
+print TMPR "    figuredir=\"$report_figuredir\",\n";
+print TMPR "    qryinput=\"$report_qry_input\",\n";
+print TMPR "    nucmeraln=\"$report_nucmer_alnfile\"\),\n";
+print TMPR "  knit_root_dir=\"$cwd\",\n";
+print TMPR "  output_dir=\"$cwd\",\n";
 print TMPR "  output_format=\"html_document\",\n";
 print TMPR "  output_file=\"$htmlout\"\)\n";
 close TMPR;
 
+
 # run
-`Rscript $tmpRscript`;
+#`Rscript $tmpRscript`;
 #`rm $tmpRscript`;
-
-
 
 ###############################################
 # module 1: check command availability
