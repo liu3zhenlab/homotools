@@ -1,0 +1,140 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings;
+use Getopt::Long;
+
+##############################
+# homomine_vcfann.pl
+# Sanzhen Liu
+# 2/14/2023
+##############################
+
+my $anncol = 8;
+my $format = "long";
+sub prompt {                                                                      
+    print <<EOF;
+    Usage: perl $0 --vcfeff <vcf_snpeff> [options]
+    [Options]
+    --vcfeff <file>  : input file in a VCF format with snpEff annotation; required
+    --anncol <num>   : column number for snpEff annotation ($anncol)
+    --refname <str>  : name to replace REF; optional
+    --altname <str>  : name to replace ALT; optional
+    --imptype <str>  : impact type (HIGH, MODERATE, LOW, MODIFIER); optional
+                       multiple types can be independently passed by using --imptype multiple times
+    --format <str>   : output format (long or short)
+    --comment        : keep VCF comments if specified
+    --help           : help information
+EOF
+exit;
+}
+my %opts = ();
+&GetOptions(\%opts,
+			"vcfeff=s",
+			"anncol=i",
+			"refname=s",
+			"altname=s",
+			"imptype=s@",
+			"format=s",
+			"comment",
+			"help");
+
+
+### parameters
+&prompt if exists $opts{help} or !%opts;
+
+my $vcfeff;
+if (!exists $opts{vcfeff}) { 
+	print STDERR "--vcfeff is required\n";
+} else {
+	$vcfeff = $opts{vcfeff};
+}
+
+if (exists $opts{format}) {
+	if (($opts{format} ne "long") and ($opts{format} ne "short")) {
+		print STDERR "--format must be either long or short\n";
+		exit;
+	} else {
+		$format = $opts{format};
+	}
+}
+
+my %all_imptypes = (HIGH => "HIGH", MODERATE => "MODERATE",
+                    LOW => "LOW", MODIFIER => "MODIFIER");
+my (@imptype, %imptype);
+if (exists $opts{imptype}) {
+	@imptype = @{$opts{imptype}};
+} else {
+	@imptype = keys %all_imptypes;
+}
+
+foreach my $intype (@imptype) {
+	if (!exists $all_imptypes{$intype}) {
+		print STDERR "$intype is not a defined impact type\n";
+		exit;
+	}
+	$imptype{$intype}++;
+}
+### read data
+# ANN=C|missense_variant&splice_region_variant|MODERATE|EXON_Zm00001eb320870_1001_1200|Zm00001eb320870|transcrip
+# t|Zm00001eb320870_T002|protein_coding|4/8|c.172G>C|p.Val58Leu|380/942|172/360|58/119||
+
+# header
+my $ref = "REF";
+my $alt = "ALT";
+$ref = $opts{refname} if (exists $opts{refname});
+$alt = $opts{altname} if (exists $opts{altname});
+if ($opts{format} eq "short") {
+	print "gene\tpos\t$ref\t$alt\ttranscript\teffect\timpact\tprotVar\n";
+} else {
+	print "gene\tpos\t$ref\t$alt\ttranscript\teffect\timpact\tdnaVar\tprotVar\tcdnaPos\tcdsPos\tproPos\tdistance2gene\n";
+}
+
+open(IN, $vcfeff) || die;
+while (<IN>) {
+	chomp;
+	if (/^#/) {
+		if (exists $opts{comment}) {
+			print "$_\n";
+		}
+	} else {
+		my @line = split(/\t/, $_);
+		my $annot = $line[$anncol - 1]; # annotation
+		$annot .= ";"; # to avoid treating consecutive | at the end as one
+		my @annot = split(/\|/, $annot);
+		for (my $i=0; $i<=$#annot; $i++) {
+			if ($annot[$i] eq "") {
+				$annot[$i] = ".";
+			}
+		}
+		my $effect = $annot[1];
+		my $impact = $annot[2];
+		my $gene = $annot[4];
+		my $geneid = $annot[5];
+		my $transcript = $annot[6];
+		my $rank = $annot[8];
+		my $dna_notation = $annot[9];
+		$dna_notation =~ s/^c\.//;
+		my $prot_notation = ".";
+		my $cdna_pos = ".";
+		my $cds_pos = ".";
+		my $prot_pos = ".";
+		my $distance = ".";
+		$prot_notation = $annot[10];
+		$prot_notation =~ s/^p\.//;
+		$cdna_pos = $annot[11];
+		$cds_pos = $annot[12];
+		$prot_pos = $annot[13];
+		$distance = $annot[14];
+		if (exists $imptype{$impact}) {
+			print join("\t", @line[0..1,3,4]);
+			if ($format eq "short") {
+				print "\t$transcript\t$effect\t$impact\t$prot_notation\n";
+			} else {
+				print "\t$transcript\t$effect\t$impact\t$dna_notation\t$prot_notation\t$cdna_pos\t$cds_pos\t$prot_pos\t$distance\n";
+			}
+		}
+	}
+}
+close IN;
+
+

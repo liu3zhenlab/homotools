@@ -104,7 +104,6 @@ if (-d $data_dir) {
 
 # snpEff
 `java -jar snpEff.jar eff ref $vcf > $prefix.vcf.eff`;
-&runreport("snpEff finished");
 
 ###############################################
 # cleanup

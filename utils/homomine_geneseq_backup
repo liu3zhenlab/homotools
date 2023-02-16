@@ -17,17 +17,14 @@ my $version = "0.0.1";
 my $extension_5p = 0;
 my $extension_3p = 0;
 my $prefix = "1_geneseq";
-my ($fas, $gtf, $gene, $te_gff, $inchr, $instart, $inend, $help);
+my ($fas, $gtf, $gene, $te_gff, $help);
 my ($cds_file, $cdna_file, $protein_file, $version_request);
 my $result = &GetOptions("fas|f=s"        => \$fas,
                          "gtf|i=s"        => \$gtf,
                          "gene|g=s"       => \$gene,
                          "ext5|e=i"       => \$extension_5p,
                          "ext3|x=i"       => \$extension_3p,
-                         "chr=s"          => \$inchr,
-						 "start=i"        => \$instart,
-						 "end=i"          => \$inend,
-						 "prefix|p=s"     => \$prefix,
+                         "prefix|p=s"     => \$prefix,
                          "cds|c=s"        => \$cds_file,
 						 "cdna|d=s"       => \$cdna_file,
 						 "protein|a=s"    => \$protein_file,
@@ -139,27 +136,6 @@ if ($gene_strand eq "+") {
 } elsif ($gene_strand eq "-") {
 	$gene_start += $extension_5p;
 	$gene_end -= $extension_3p;
-}
-
-if ((defined $inchr) and ($inchr ne $chromosome)) {
-	print STDERR RED, "Warning: --inchr is different from chr identified, which is $chromosome\n", RESET;
-	exit;
-}
-
-if (defined $instart) {
-	if ($gene_strand eq "+") {
-		$gene_start = $instart;
-	} else {
-		$gene_end = $instart;
-	}
-}
-
-if (defined $inend) {
-	if ($gene_strand eq "+") {
-		$gene_end = $inend;
-	} else {
-		$gene_start = $inend;
-	}
 }
 
 # adjust position to a newly defined start for gene information in a GTF

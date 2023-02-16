@@ -1,15 +1,17 @@
 ---
 title: "homomine report"
 author: "Sanzhen Liu"
-date: "2/12/2023"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
 params:
   cwd: NUL
   scriptdir: NULL
   qrygene: NULL
+  qryseq: NULL
   qrybase: NULL
   qrybed: NULL
   tgtbase: NULL
   tgtgene: NULL
+  tgtseq: NULL
   tgtbed: NULL
   tgthit: NULL
   datadir: NULL
@@ -23,15 +25,18 @@ output:
 ---
 
 ```{r parameters, echo = FALSE}
+library(knitr)
 qrygene <- params$qrygene
 cwd <- params$cwd
 scriptdir <- params$scriptdir
 qrygene <- params$qrygene
 qrybase <- params$qrybase
+qryseq <- params$qryseq
 qrybed <- params$qrybed
 tgtgene <- params$tgtgene
 tgtbase <- params$tgtbase
 tgthit <- params$tgthit
+tgtseq <- params$tgtseq
 tgtbed <- params$tgtbed
 tgthit <- params$tgthit
 datadir <- params$datadir
@@ -40,33 +45,15 @@ qryinput <- params$qryinput
 nucmeraln <- params$nucmeraln
 ```
 
-```{r setup, echo=F}
-library(knitr)
-#cwd="/homes/liu3zhen/scripts2/homotools/dev/test"
-#scriptdir="/homes/liu3zhen/scripts2/homotools/utils/"
-#qrygene="Zm00001eb320870"
-#qrybase="B73-5.0"
-#qrybed="Zm00001eb320870/5_Zm00001eb320870_to_A188v1_output/data/B73-5.0.label.bed"
-#tgtbase="A188v1"
-#tgtgene="Zm00056a037633"
-#tgtbed="Zm00001eb320870/5_Zm00001eb320870_to_A188v1_output/data/A188v1.label.bed"
-#tgthit="Zm00001eb320870/5_Zm00001eb320870_to_A188v1_output/data/Zm00001eb320870_to_A188v1.hit.output"
-#datadir="Zm00001eb320870/5_Zm00001eb320870_to_A188v1_output/data"
-#figuredir="Zm00001eb320870/5_Zm00001eb320870_to_A188v1_output/figures"
-#qryinput="Zm00001eb320870/5_Zm00001eb320870_to_A188v1_output/data/Zm00001eb320870_B73-5.0.search.input"
-#nucmeraln="Zm00001eb320870/5_Zm00001eb320870_to_A188v1_output/data/Zm00001eb320870_to_A188v1.uniq.filt.delta.txt"
-#knitr::opts_knit$set(root.dir = cwd)
-```
+### Homomine report of **`r qrygene`**
 
-Homomine report of `r qrygene`
-
-#### Basic information of `r qrygene` from `r qrybase`
+#### o Basic information of `r qrygene` from `r qrybase`
 ```{r qry, echo=F, comment=""}
 qry_data <- read.delim(qryinput)
 kable(qry_data)
 ```
 
-#### Target hit in `r tgtbase`
+#### o Target hit in `r tgtbase`
 ```{r target, echo=F, comment=""}
 tgt_data <- read.delim(tgthit)
 kable(tgt_data)
@@ -79,15 +66,76 @@ qt_data_outfile <- paste0(cwd, "/", qrygene, "/", qrygene, "_", tgtbase, ".homo.
 write.table(qt_data, qt_data_outfile, row.names=F, quote=F, sep="\t")
 ```
 
-#### Virsualization of Nucmer alignments
+#### o Virsualization of Nucmer alignments
 ```{r comp, echo=F, comment="", fig.height=3, fig.width=6, fig.cap="Fig 1. Nucmer alignment."}
 source(paste0(scriptdir, "/homomine_nucmerplot.R"))
-outpdf <- "test.pdf"
+outpdf <- paste0(qrygene, "_to_", tgtbase, "nucmer.pdf")
 homomine_nucmerplot(datafile=nucmeraln, qrybed=qrybed, tgtbed=tgtbed,
                     outpath=figuredir, ispdf=F, imageoutfile=outpdf)
 ```
-Nucmer was used to align sequences of the two genomes. Only uniquely aigned regions are displayed. Green: repetitive sequences; light blue: UTRs; blue: exons.
+Nucmer was used to align sequences of the two sequences. Only uniquely aigned regions are displayed. Green: repetitive sequences; light blue: untranslated regions; blue: exons.
 
-```{r polymorphism, echo=F, comment="", fig.height=3, fig.width=6, fig.cap="Fig 2"}
+```{r aln, echo=F, comment=""}
+aln_data <- read.delim(nucmeraln)
+kable(aln_data)
+```
 
+#### o Genomic variants with high or moderate impacts
+```{r vcfeff, echo=F, comment="", results = 'asis'}
+vcfeff_files <- dir(path=datadir, pattern="eff$", full.names=T)
+if (length(vcfeff_files)>0) {
+for (evcfeff in vcfeff_files) {
+  evcfeff_data <- read.delim(evcfeff, check.names=F)
+  print(kable(evcfeff_data))
+  cat("\n")
+}
+} else {
+  cat("    No high or moderate variants identified\n")
+}
+```
+
+#### o All polymorphisms identified
+```{r vcf, echo=F, comment="", results = 'asis'}
+vcffiles <- dir(path=datadir, pattern="vcf$", full.names=T)
+max_seqlen2display <- 50
+variant_found <- 0
+if (length(vcffiles) > 0) {
+  for (evcf in vcffiles) {
+    evcf_data <- read.delim(evcf, comment.char="#", header=F)
+    if (nrow(evcf_data) > 0) {
+      variant_found <- 1
+    }
+    evcf_data <- evcf_data[, c(1,2,4,5)]
+    colnames(evcf_data) <- c("gene", "pos", "REF", "ALT")
+    ref_long <- nchar(evcf_data$REF) > max_seqlen2display
+    alt_long <- nchar(evcf_data$ALT) > max_seqlen2display
+    evcf_data$REF[ref_long] <- paste0("long-", nchar(evcf_data$REF)[ref_long], "bp")
+    evcf_data$ALT[alt_long] <- paste0("long-", nchar(evcf_data$ALT)[ref_long], "bp")
+    print(kable(evcf_data))
+  }
+} else {
+  cat("    No variant files found\n")
+}
+
+if (variant_found == 0) {
+  cat("    No variants found\n")
+}
+```
+
+#### o Query sequence from `r qrybase`
+```{r qryseq, echo=F, comment=""}
+qry_seq <- readLines(qryseq)
+qry_seqname <- qry_seq[1]
+qry_seqdata <- paste(qry_seq[-1], collapse = "")
+cat(qry_seqname, qry_seqdata, sep="\n")
+cat("\n")
+```
+
+#### o Target sequence from `r tgtbase`
+```{r tgtseq, echo=F, comment=""}
+tgt_seq <- readLines(tgtseq)
+tgt_seqname <- tgt_seq[1]
+tgt_seqdata <- paste(tgt_seq[-1], collapse = "")
+cat(tgt_seqname, tgt_seqdata, sep="\n")
+cat("\n")
 ```

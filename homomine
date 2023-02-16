@@ -1,11 +1,11 @@
 #!/usr/bin/perl -w
 #======================================================================
 # homomine
-#
-# Author: Sanzhen Liu <liu3zhen@ksu.edu>
+# Sanzhen Liu <liu3zhen@ksu.edu>
 # 1/30/2023
 #
-# The Perl script to find the match region and plot alignments
+# The Perl script to find the match region in a target genome
+# and explore differences
 #======================================================================
 
 use strict;
@@ -214,7 +214,7 @@ my $tgt_data_prefix = $prefix."/3_".$tgtbase."_gene";
 my $seqpair2var_dir = $prefix."/4_".$qrybase."_".$tgtbase."_var";
 
 # report dir
-my $report_dir = $prefix."/5_".$qrygene."_to_".$tgtbase."_output";
+my $report_dir = $prefix."/".$qrygene."_to_".$tgtbase."_output";
 
 ###############################################
 # geneseq the query gene
@@ -235,9 +235,9 @@ my $report_dir = $prefix."/5_".$qrygene."_to_".$tgtbase."_output";
 &runreport("Search the target genome");
 
 # gene sequence:
-my $qrygene_seqfile = $qry_data_prefix."/1.".$qrygene.".fasta";
-if (!-f $qrygene_seqfile) {
-	print STDERR RED, "Error: $qrygene_seqfile does not exist.\n", RESET;
+my $qry_seqfile = $qry_data_prefix."/1.".$qrygene.".fasta";
+if (!-f $qry_seqfile) {
+	print STDERR RED, "Error: $qry_seqfile does not exist.\n", RESET;
 	exit;
 }
 
@@ -257,7 +257,7 @@ if ( !exists $opts{qryisoform}) {
 
 ### run comparison
 `perl $utilsPath/homomine_comp \\
-	--query $qrygene_seqfile \\
+	--query $qry_seqfile \\
 	--qrygene $qrygene \\
 	--qryadd $isoform_bedfile \\
 	--db $tgt_genome \\
@@ -278,19 +278,26 @@ if ( !exists $opts{qryisoform}) {
 # geneseq the target gene
 ###############################################
 &runreport("Extract target gene information");
-#my $tgt_gene_file = $gene2target_homocomp."/4c.target.posadj.annotation/selected_feature";
 my $tgt_gene_file = $gene2target_homocomp."/hit.output";
+my ($hit_target_chr, $hit_target_start, $hit_target_end, $hit_target_strand);
 my $tgt_gene = "";
 my $target_transcript = "";
 if (-f $tgt_gene_file) {
 	open(TARGETGENE, "<", $tgt_gene_file) || die;
-	my ($target_chr, $target_start, $target_end, $target_strand);
 	while (<TARGETGENE>) {
 		chomp;
 		my @tline = split(/\t/, $_);
-		if ($tline[0] eq "gene" ) {
+		if ($tline[0] eq "chr") {
+			$hit_target_chr = $tline[1];
+		} elsif ($tline[0] eq "start") {
+			$hit_target_start = $tline[1];
+		} elsif ($tline[0] eq "end") {
+			$hit_target_end = $tline[1];
+		} elsif ($tline[0] eq "strand") {
+			$hit_target_strand = $tline[1];
+		} elsif ($tline[0] eq "gene") {
 			$tgt_gene = $tline[1];
-		} elsif ($tline[0] eq "trancript" ) {
+		} elsif ($tline[0] eq "trancript") {
 			$target_transcript = $tline[1];
 		}
 	}
@@ -301,6 +308,9 @@ if (-f $tgt_gene_file) {
 			--fas $tgt_genome \\
 			--gene $tgt_gene \\
 			--gtf $tgt_gtf \\
+			--chr $hit_target_chr \\
+			--start $hit_target_start \\
+			--end $hit_target_end \\
 			--prefix $tgt_data_prefix \\
 			--te $tgt_te --cds $tgt_cds \\
 			--cdna $tgt_cdna --protein $tgt_protein`;
@@ -311,16 +321,18 @@ if (-f $tgt_gene_file) {
 	&runreport("No genes identified in the target genome");
 }
 
+print "=$hit_target_chr\t$hit_target_start\t$hit_target_end\n";
+
 ###############################################
 # polymorphism
 ###############################################
-# $qrygene_seqfile
-my $tgtgene_seqfile = $gene2target_homocomp."/".$qrygene."_".$tgtbase.".4.target.fas";
+# $qry_seqfile
+my $tgt_seqfile = $gene2target_homocomp."/".$qrygene."_".$tgtbase.".4.target.fas";
 my $seqpair2var_prefix = "1_polymorphism";
 `perl $utilsPath/homomine_seqpair2var \\
-	--ref $qrygene_seqfile \\
+	--ref $qry_seqfile \\
 	--refgeno $qrybase \\
-	--qry $tgtgene_seqfile \\
+	--qry $tgt_seqfile \\
 	--qrygeno $tgtbase \\
 	--outdir $seqpair2var_dir \\
 	--prefix $seqpair2var_prefix`;
@@ -344,7 +356,7 @@ if (-d $qrygene_gtf_dir) {
 		my $snpeff_prefix = $gtf_count."_".$transcript;
 	    `perl $utilsPath/homomine_snpeff \\
 			--vcf $vcf \\
-			--ref $qrygene_seqfile \\
+			--ref $qry_seqfile \\
 			--gtf $gene_gtf_file \\
 			--outdir $seqpair2var_dir \\
 			--prefix $snpeff_prefix`;
@@ -375,7 +387,7 @@ if (!-d $report_datadir) {
 }
 
 my $cwd = &abs_path("."); # current directory
-my $report_dir = $cwd."/".$qrygene;
+my $html_output_dir = $cwd."/".$qrygene;
 
 # query input
 my $qry_gene_info_bed = $qry_data_prefix."/3.".$qrygene.".original.bed";
@@ -446,11 +458,22 @@ if (-f $nucmer_alnfile) {
 }
 
 # variant and snpeff (HIGH and MODERATE)
-#	3_Zm00001eb320870_T002.vcf.eff
-# $seqpair2var_dir
+my $report_var = $report_datadir."/".$qrygene."_to_".$tgtbase.".vcf";
+`cp $seqpair2var_dir/1_polymorphism.2.vcf $report_var`;
 
-#my $ori_vcfeff = $seqpair2var_dir."/3_".$.".vcf.eff";
-#my $filt_vcfeff = $report_datadir."/".
+my @eff_files = glob($seqpair2var_dir.'/*vcf.eff');
+### HIGH or MODERATE impacts
+foreach my $vcfeff (@eff_files) {
+	my $report_high_mod_vcfeff = $vcfeff;
+	$report_high_mod_vcfeff =~ s/.*\///g;
+	$report_high_mod_vcfeff =~ s/^[0-9]+_//g;
+	$report_high_mod_vcfeff =~ s/\.vcfeff/\.HIGH_MOD\.vcfeff/g;
+	`perl $utilsPath/homomine_vcfann --vcfeff $vcfeff \\
+		--imptype MODERATE --imptype HIGH \\
+		--refname $qrybase --altname $tgtbase \\
+		--format short > $report_datadir/$report_high_mod_vcfeff`;
+}
+
 
 my $htmlout = $prefix.".homomine.report.html";
 my $tmpRscript = $prefix."/homomine_X_Rmd.render.R";
@@ -464,9 +487,11 @@ print TMPR "    cwd=\"$cwd\",\n";
 print TMPR "    scriptdir=\"$utilsPath\",\n";
 print TMPR "    qrygene=\"$qrygene\",\n";
 print TMPR "    qrybase=\"$qrybase\",\n";
+print TMPR "    qryseq=\"$qry_seqfile\",\n";
 print TMPR "    qrybed=\"$qrybed\",\n";
 print TMPR "    tgtbase=\"$tgtbase\",\n";
 print TMPR "    tgtgene=\"$tgt_gene\",\n";
+print TMPR "    tgtseq=\"$tgt_seqfile\",\n";
 print TMPR "    tgtbed=\"$tgtbed\",\n";
 print TMPR "    tgthit=\"$report_tgthit\",\n";
 print TMPR "    datadir=\"$report_datadir\",\n";
@@ -474,15 +499,13 @@ print TMPR "    figuredir=\"$report_figuredir\",\n";
 print TMPR "    qryinput=\"$report_qry_input\",\n";
 print TMPR "    nucmeraln=\"$report_nucmer_alnfile\"\),\n";
 print TMPR "  knit_root_dir=\"$cwd\",\n";
-print TMPR "  output_dir=\"$report_dir\",\n";
+print TMPR "  output_dir=\"$html_output_dir\",\n";
 print TMPR "  output_format=\"html_document\",\n";
 print TMPR "  output_file=\"$htmlout\"\)\n";
 close TMPR;
 
-
 # run
 `Rscript $tmpRscript`;
-#`rm $tmpRscript`;
 
 ###############################################
 # module 1: check command availability
@@ -506,8 +529,6 @@ sub runreport {
     my $dateinfo = `date +'o %Y-%m-%d %H:%M:%S'`;
 	print STDERR MAGENTA, "$dateinfo", RESET;
 	print STDERR "  $injob.\n";
-	#print LOG "$dateinfo  ";    
-	#print LOG "  $injob.\n";
 }
 
 ###############################################
