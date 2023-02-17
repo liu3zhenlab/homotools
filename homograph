@@ -18,7 +18,7 @@ use lib "$FindBin::Bin/lib";
 #use genegtfadjust;
 #use maxbed;
 
-my $version = "0.2.3";
+my $version = "0.2.4";
 
 my $prefix = "hgout";
 my $threads = 1;

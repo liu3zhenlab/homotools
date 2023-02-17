@@ -1,0 +1,92 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings;
+use Getopt::Long;
+
+##############################
+# homomine_vcf2svBED.pl
+# Sanzhen Liu
+# 2/14/2023
+##############################
+
+my $min_var_bp = 50;
+my $bp_diff_cutoff = 30;
+sub prompt {                                                                      
+    print <<EOF;
+    Usage: perl $0 --vcfeff <vcf_snpeff> [options]
+    [Options]
+    --vcf <file>     : input VCF file; required
+    --minvar <num>   : minimum bp to declare a SV call ($min_var_bp)
+    --bpdiff <num>   : bp different between REF and ALT ($bp_diff_cutoff)
+    --anncol <num>   : column number for snpEff annotation; optional
+	--help           : help information
+EOF
+exit;
+}
+my %opts = ();
+&GetOptions(\%opts,
+			"vcf=s",
+			"minvar=i",
+			"bpdiff=i",
+			"anncol=i",
+			"help");
+
+
+### parameters
+&prompt if exists $opts{help} or !%opts;
+
+$min_var_bp = $opts{minvar} if exists $opts{minvar};
+$bp_diff_cutoff = $opts{bpdiff} if exists $opts{bpdiff};
+my $anncol = $opts{anncol} if exists $opts{anncol};
+
+my $vcf;
+if (!exists $opts{vcf}) { 
+	print STDERR "--vcf is required\n";
+} else {
+	$vcf = $opts{vcf};
+}
+
+my $sv_event_count = 0;
+open(IN, $vcf) || die;
+while (<IN>) {
+	chomp;
+	if (!/^#/) {
+		my @line = split(/\t/, $_);
+		my ($chr, $start, $ref, $alt) = @line[0,1,3,4];
+		
+		my $annot_info = ".";
+		if (exists $opts{anncol}) {	
+			my $annot = $line[$opts{anncol} - 1]; # annotation
+			$annot .= ";"; # to avoid treating consecutive | at the end as one
+			my @annot = split(/\|/, $annot);
+			for (my $i=0; $i<=$#annot; $i++) {
+				if ($annot[$i] eq "") {
+					$annot[$i] = ".";
+				}
+			}
+			my $effect = $annot[1];
+			my $impact = $annot[2];
+			my $transcript = $annot[6];
+			$annot_info = $transcript.";".$effect.";".$impact;
+		}
+
+		my $ref_len = length($ref);
+		my $alt_len = length($alt);
+		my $ref_alt_diff = abs($ref_len - $alt_len);
+		if (($ref_len >= $min_var_bp or $alt_len >= $min_var_bp) and $ref_alt_diff >= $bp_diff_cutoff) {
+			$sv_event_count++;
+			my $bed_start = $start - 1;
+			my $bed_end = $bed_start + $ref_len;
+			my $sv_type_num;
+			if ($alt_len > $ref_len) {
+				$sv_type_num = "ins_".$sv_event_count;
+			} else {
+				$sv_type_num = "del_".$sv_event_count;
+			}
+			print "$line[0]\t$bed_start\t$bed_end\t$sv_type_num\t$annot_info\n";
+		}
+	}
+}
+close IN;
+
+

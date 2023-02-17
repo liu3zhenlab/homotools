@@ -14,6 +14,8 @@ params:
   tgtseq: NULL
   tgtbed: NULL
   tgthit: NULL
+  qrysvte: NULL
+  tgtsvte: NULL
   datadir: NULL
   figuredir: NULL
   qryinput: NULL
@@ -39,21 +41,23 @@ tgthit <- params$tgthit
 tgtseq <- params$tgtseq
 tgtbed <- params$tgtbed
 tgthit <- params$tgthit
+qrysvte <- params$qrysvte
+tgtsvte <- params$tgtsvte
 datadir <- params$datadir
 figuredir <- params$figuredir
 qryinput <- params$qryinput
 nucmeraln <- params$nucmeraln
 ```
 
-### Homomine report of **`r qrygene`**
+## Homomine report of **`r qrygene`**
 
-#### o Basic information of `r qrygene` from `r qrybase`
+### o Basic information of `r qrygene` from `r qrybase`
 ```{r qry, echo=F, comment=""}
 qry_data <- read.delim(qryinput)
 kable(qry_data)
 ```
 
-#### o Target hit in `r tgtbase`
+### o Target hit in `r tgtbase`
 ```{r target, echo=F, comment=""}
 tgt_data <- read.delim(tgthit)
 kable(tgt_data)
@@ -66,7 +70,7 @@ qt_data_outfile <- paste0(cwd, "/", qrygene, "/", qrygene, "_", tgtbase, ".homo.
 write.table(qt_data, qt_data_outfile, row.names=F, quote=F, sep="\t")
 ```
 
-#### o Virsualization of Nucmer alignments
+### o Virsualization of Nucmer alignments
 ```{r comp, echo=F, comment="", fig.height=3, fig.width=6, fig.cap="Fig 1. Nucmer alignment."}
 source(paste0(scriptdir, "/homomine_nucmerplot.R"))
 outpdf <- paste0(qrygene, "_to_", tgtbase, "nucmer.pdf")
@@ -80,7 +84,7 @@ aln_data <- read.delim(nucmeraln)
 kable(aln_data)
 ```
 
-#### o Genomic variants with high or moderate impacts
+### o Genomic variants with high or moderate impacts
 ```{r vcfeff, echo=F, comment="", results = 'asis'}
 vcfeff_files <- dir(path=datadir, pattern="eff$", full.names=T)
 if (length(vcfeff_files)>0) {
@@ -94,24 +98,65 @@ for (evcfeff in vcfeff_files) {
 }
 ```
 
-#### o All polymorphisms identified
+### o Structural variation used `r qrybase` as the reference
+SV was defined if either REF or ALT allele has at least 50 bp and the length difference of two alleles are at least 30 bp.  
+```{r qrySV, echo=F, comment=""}
+if (file.info(qrysvte)$size > 0) {
+  qrysvte_data <- read.delim(qrysvte, header=F)
+  if (ncol(qrysvte_data)<=5) {
+    colnames(qrysvte_data) <- c("seqname", "start", "end", "svtype", "svnote")
+  } else {
+    colnames(qrysvte_data) <- c("seqname", "start", "end", "svtype", "svnote", "TEstart", "TEend", "TE")
+  }
+  if (nrow(qrysvte_data)>0) {
+    kable(qrysvte_data, caption="SV and potential TEs")
+  } else {
+    cat("    No SVs identified\n")
+  }
+
+  qrysvte_outfile <- paste0(cwd, "/", qrygene, "/", qrygene, "_", tgtbase, ".SV.txt")
+  # output
+  write.table(qrysvte_data, qrysvte_outfile, row.names=F, quote=F, sep="\t")
+}
+```
+
+### o Structural variation used `r tgtbase` as the reference
+```{r tgtSV, echo=F, comment="", results = 'asis'}
+if (file.info(tgtsvte)$size > 0) {
+  tgtsvte_data <- read.delim(tgtsvte, header=F)
+  if (ncol(tgtsvte_data)<=5) {
+    colnames(tgtsvte_data) <- c("seqname", "start", "end", "svtype", "svnote")
+  } else {
+    colnames(tgtsvte_data) <- c("seqname", "start", "end", "svtype", "svnote", "TEstart", "TEend", "TE")
+  }
+  if (nrow(tgtsvte_data)>0) {
+    kable(tgtsvte_data, caption="SV and potential TEs")
+  } else {
+    cat("    No SVs identified\n")
+  }
+}
+```
+
+### o All polymorphisms identified
 ```{r vcf, echo=F, comment="", results = 'asis'}
 vcffiles <- dir(path=datadir, pattern="vcf$", full.names=T)
 max_seqlen2display <- 50
 variant_found <- 0
 if (length(vcffiles) > 0) {
   for (evcf in vcffiles) {
+    evcf_refname <- gsub(".*vars_on_", "", evcf)
+    evcf_refname <- gsub(".vcf$", "", evcf_refname)
     evcf_data <- read.delim(evcf, comment.char="#", header=F)
     if (nrow(evcf_data) > 0) {
       variant_found <- 1
     }
     evcf_data <- evcf_data[, c(1,2,4,5)]
-    colnames(evcf_data) <- c("gene", "pos", "REF", "ALT")
+    colnames(evcf_data) <- c("seqname", "pos", "REF", "ALT")
     ref_long <- nchar(evcf_data$REF) > max_seqlen2display
     alt_long <- nchar(evcf_data$ALT) > max_seqlen2display
     evcf_data$REF[ref_long] <- paste0("long-", nchar(evcf_data$REF)[ref_long], "bp")
-    evcf_data$ALT[alt_long] <- paste0("long-", nchar(evcf_data$ALT)[ref_long], "bp")
-    print(kable(evcf_data))
+    evcf_data$ALT[alt_long] <- paste0("long-", nchar(evcf_data$ALT)[alt_long], "bp")
+    print(kable(evcf_data, caption=paste("Variants on the sequence from", evcf_refname)))
   }
 } else {
   cat("    No variant files found\n")
@@ -122,7 +167,7 @@ if (variant_found == 0) {
 }
 ```
 
-#### o Query sequence from `r qrybase`
+### o Query sequence from `r qrybase`
 ```{r qryseq, echo=F, comment=""}
 qry_seq <- readLines(qryseq)
 qry_seqname <- qry_seq[1]
@@ -131,7 +176,7 @@ cat(qry_seqname, qry_seqdata, sep="\n")
 cat("\n")
 ```
 
-#### o Target sequence from `r tgtbase`
+### o Target sequence from `r tgtbase`
 ```{r tgtseq, echo=F, comment=""}
 tgt_seq <- readLines(tgtseq)
 tgt_seqname <- tgt_seq[1]

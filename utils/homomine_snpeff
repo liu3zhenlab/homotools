@@ -69,11 +69,7 @@ $libPath = &abs_path($libPath);
 my $cwd = getcwd(); # current directory
 
 # create a directory for outputs
-if (-d $outdir) {
-	if ($outdir ne ".") {
-		print STDERR RED, "Warning: the directory $outdir exists.\n", RESET;
-	}
-} else {
+if (!-d $outdir) {
 	`mkdir $outdir`;
 }
 

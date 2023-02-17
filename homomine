@@ -20,7 +20,7 @@ use lib "$FindBin::Bin/lib";
 use Cwd;
 use Cwd 'abs_path';
 
-my $version = "0.2.3";
+my $version = "0.2.4";
 
 my $ext5 = 1000;
 my $ext3 = 500;
@@ -211,7 +211,8 @@ my $gene2target_homocomp = $prefix."/2_".$qrygene."_to_".$tgtbase;
 my $tgt_data_prefix = $prefix."/3_".$tgtbase."_gene";
 
 # pair2var via MSA
-my $seqpair2var_dir = $prefix."/4_".$qrybase."_".$tgtbase."_var";
+my $seqpair2var_qry_dir = $prefix."/4_".$qrybase."asREF_var";
+my $seqpair2var_tgt_dir = $prefix."/5_".$tgtbase."asREF_var";
 
 # report dir
 my $report_dir = $prefix."/".$qrygene."_to_".$tgtbase."_output";
@@ -321,28 +322,39 @@ if (-f $tgt_gene_file) {
 	&runreport("No genes identified in the target genome");
 }
 
-print "=$hit_target_chr\t$hit_target_start\t$hit_target_end\n";
-
 ###############################################
-# polymorphism
+# polymorphism 1 - qry as REF
 ###############################################
 # $qry_seqfile
 my $tgt_seqfile = $gene2target_homocomp."/".$qrygene."_".$tgtbase.".4.target.fas";
-my $seqpair2var_prefix = "1_polymorphism";
+my $seqpair2var_on_qry_prefix = "1_qry_".$qrybase.".polymorphism";
 `perl $utilsPath/homomine_seqpair2var \\
 	--ref $qry_seqfile \\
 	--refgeno $qrybase \\
 	--qry $tgt_seqfile \\
 	--qrygeno $tgtbase \\
-	--outdir $seqpair2var_dir \\
-	--prefix $seqpair2var_prefix`;
+	--outdir $seqpair2var_qry_dir \\
+	--prefix $seqpair2var_on_qry_prefix`;
+
+###############################################
+# polymorphism 2 - tgt as REF
+###############################################
+# $qry_seqfile
+my $seqpair2var_on_tgt_prefix = "1_tgt_".$tgtbase.".polymorphism";
+`perl $utilsPath/homomine_seqpair2var \\
+	--ref $tgt_seqfile \\
+	--refgeno $tgtbase \\
+	--qry $qry_seqfile \\
+	--qrygeno $qrybase \\
+	--outdir $seqpair2var_tgt_dir \\
+	--prefix $seqpair2var_on_tgt_prefix`;
 
 &runreport("Polymorphisms identified");
 
 ###############################################
 # snpeff
 ###############################################
-my $vcf = $seqpair2var_dir."/".$seqpair2var_prefix.".2.vcf";
+my $vcf = $seqpair2var_qry_dir."/".$seqpair2var_on_qry_prefix.".2.vcf";
 my $qrygene_gtf_dir = $qry_data_prefix."/4\.".$qrygene.".pos.adjusted.gtf.bed";
 
 if (-d $qrygene_gtf_dir) {
@@ -358,7 +370,7 @@ if (-d $qrygene_gtf_dir) {
 			--vcf $vcf \\
 			--ref $qry_seqfile \\
 			--gtf $gene_gtf_file \\
-			--outdir $seqpair2var_dir \\
+			--outdir $seqpair2var_qry_dir \\
 			--prefix $snpeff_prefix`;
 	}
 }
@@ -413,6 +425,7 @@ my $report_tgthit = $report_datadir."/".$qrygene."_to_".$tgtbase.".hit.output";
 my $tgtbed = "empty";
 my $tgt_transcript = "empty";
 my (@hit_header, @hit_content);
+my $tgt_te_bedfile;
 if ($tgt_gene ne "") {
 	# target BED
 	$tgtbed = $report_datadir."/".$tgtbase.".label.bed";
@@ -428,8 +441,8 @@ if ($tgt_gene ne "") {
 	}
 	close TGTHIT;
 	my $tgt_isoform_bedfile = $tgt_data_prefix."/4.".$tgt_gene.".pos.adjusted.gtf.bed/".$tgt_transcript.".adjusted.bed";
-	my $tgt_te_bedfile = $tgt_data_prefix."5.".$tgt_gene.".others/".$tgt_gene.".TE.adjusted.bed";
-	if (-d $tgt_te_bedfile) {
+	$tgt_te_bedfile = $tgt_data_prefix."/5.".$tgt_gene.".others/".$tgt_gene.".TE.adjusted.bed";
+	if (-f $tgt_te_bedfile) {
 		`cat $tgt_isoform_bedfile $tgt_te_bedfile > $tgtbed`;
 	} else {
 		`cp $tgt_isoform_bedfile $tgtbed`;
@@ -450,19 +463,22 @@ if ($tgt_gene ne "") {
 }
 
 ### alignment
-#	Zm00001eb320870_A188v1.5f.uniq.filt.delta.txt
 my $nucmer_alnfile = $gene2target_homocomp."/".$qrygene."_".$tgtbase.".5f.uniq.filt.delta.txt";
 my $report_nucmer_alnfile = $report_datadir."/".$qrygene."_to_".$tgtbase.".uniq.filt.delta.txt";
 if (-f $nucmer_alnfile) {
 	`cp $nucmer_alnfile $report_nucmer_alnfile`;
 }
 
-# variant and snpeff (HIGH and MODERATE)
-my $report_var = $report_datadir."/".$qrygene."_to_".$tgtbase.".vcf";
-`cp $seqpair2var_dir/1_polymorphism.2.vcf $report_var`;
+### variant and snpeff (HIGH and MODERATE)
+my $report_var_on_qry = $report_datadir."/"."vars_on_".$qrybase.".vcf";
+my $report_var_on_tgt = $report_datadir."/"."vars_on_".$tgtbase.".vcf";
+my $vars_on_qry = $seqpair2var_qry_dir."/".$seqpair2var_on_qry_prefix.".2.vcf";
+my $vars_on_tgt = $seqpair2var_tgt_dir."/".$seqpair2var_on_tgt_prefix.".2.vcf";
+`cp $vars_on_qry $report_var_on_qry`;
+`cp $vars_on_tgt $report_var_on_tgt`;
 
-my @eff_files = glob($seqpair2var_dir.'/*vcf.eff');
-### HIGH or MODERATE impacts
+my @eff_files = glob($seqpair2var_qry_dir.'/*vcf.eff');
+# HIGH or MODERATE impacts
 foreach my $vcfeff (@eff_files) {
 	my $report_high_mod_vcfeff = $vcfeff;
 	$report_high_mod_vcfeff =~ s/.*\///g;
@@ -474,6 +490,34 @@ foreach my $vcfeff (@eff_files) {
 		--format short > $report_datadir/$report_high_mod_vcfeff`;
 }
 
+### variant and TE
+# qry as reference
+my $qry_vcfeff_file = $eff_files[0];
+my $qry_sv_te_bed = $report_datadir."/"."SV_on_".$qrybase.".bed";
+if (-f $qry_te_bedfile) {
+	`perl  $utilsPath/homomine_vcf2svBED \\
+		--anncol 8 --vcf $qry_vcfeff_file | \\
+		bedtools intersect -a - \\
+		-b $qry_te_bedfile -wao | \\
+		cut -f 1-5,7-9 \\
+		> $qry_sv_te_bed`;
+} else {
+	`perl  $utilsPath/homomine_vcf2svBED \\
+		--vcf $qry_vcfeff_file > $qry_sv_te_bed`;
+}
+
+my $tgt_sv_te_bed = $report_datadir."/"."SV_on_".$tgtbase.".bed";
+if (-f $tgt_te_bedfile) {
+	`perl  $utilsPath/homomine_vcf2svBED \\
+		--vcf $vars_on_tgt | \\
+		bedtools intersect -a - \\
+		-b $tgt_te_bedfile -wao | \\
+		cut -f 1-5,7-9 \\
+		> $tgt_sv_te_bed`;
+} else {
+	`perl  $utilsPath/homomine_vcf2svBED \\
+		--vcf $vars_on_tgt > $tgt_sv_te_bed`;
+}
 
 my $htmlout = $prefix.".homomine.report.html";
 my $tmpRscript = $prefix."/homomine_X_Rmd.render.R";
@@ -493,6 +537,8 @@ print TMPR "    tgtbase=\"$tgtbase\",\n";
 print TMPR "    tgtgene=\"$tgt_gene\",\n";
 print TMPR "    tgtseq=\"$tgt_seqfile\",\n";
 print TMPR "    tgtbed=\"$tgtbed\",\n";
+print TMPR "    qrysvte=\"$qry_sv_te_bed\",\n";
+print TMPR "    tgtsvte=\"$tgt_sv_te_bed\",\n";
 print TMPR "    tgthit=\"$report_tgthit\",\n";
 print TMPR "    datadir=\"$report_datadir\",\n";
 print TMPR "    figuredir=\"$report_figuredir\",\n";
