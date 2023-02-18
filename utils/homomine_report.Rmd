@@ -88,13 +88,17 @@ kable(aln_data)
 ```{r vcfeff, echo=F, comment="", results = 'asis'}
 vcfeff_files <- dir(path=datadir, pattern="eff$", full.names=T)
 if (length(vcfeff_files)>0) {
-for (evcfeff in vcfeff_files) {
-  evcfeff_data <- read.delim(evcfeff, check.names=F)
-  print(kable(evcfeff_data))
-  cat("\n")
-}
+  for (evcfeff in vcfeff_files) {
+    evcfeff_data <- read.delim(evcfeff, check.names=F)
+    if (nrow(evcfeff_data) > 0) {
+      print(kable(evcfeff_data))
+      cat("\n")
+    }
+  }
 } else {
-  cat("    No high or moderate variants identified\n")
+  cat("No high or moderate variants identified\n")
+} else {
+  cat("No high or moderate variants identified\n")
 }
 ```
 
@@ -108,20 +112,23 @@ if (file.info(qrysvte)$size > 0) {
   } else {
     colnames(qrysvte_data) <- c("seqname", "start", "end", "svtype", "svnote", "TEstart", "TEend", "TE")
   }
+  
   if (nrow(qrysvte_data)>0) {
     kable(qrysvte_data, caption="SV and potential TEs")
   } else {
-    cat("    No SVs identified\n")
+    cat("No SVs identified\n")
   }
 
   qrysvte_outfile <- paste0(cwd, "/", qrygene, "/", qrygene, "_", tgtbase, ".SV.txt")
   # output
   write.table(qrysvte_data, qrysvte_outfile, row.names=F, quote=F, sep="\t")
+} else {
+  cat("No SVs identified\n")
 }
 ```
 
 ### o Structural variation used `r tgtbase` as the reference
-```{r tgtSV, echo=F, comment="", results = 'asis'}
+```{r tgtSV, echo=F, comment=""}
 if (file.info(tgtsvte)$size > 0) {
   tgtsvte_data <- read.delim(tgtsvte, header=F)
   if (ncol(tgtsvte_data)<=5) {
@@ -129,11 +136,14 @@ if (file.info(tgtsvte)$size > 0) {
   } else {
     colnames(tgtsvte_data) <- c("seqname", "start", "end", "svtype", "svnote", "TEstart", "TEend", "TE")
   }
+  
   if (nrow(tgtsvte_data)>0) {
     kable(tgtsvte_data, caption="SV and potential TEs")
   } else {
-    cat("    No SVs identified\n")
+    cat("No SVs identified\n")
   }
+} else {
+  cat("No SVs identified\n")
 }
 ```
 
@@ -146,17 +156,18 @@ if (length(vcffiles) > 0) {
   for (evcf in vcffiles) {
     evcf_refname <- gsub(".*vars_on_", "", evcf)
     evcf_refname <- gsub(".vcf$", "", evcf_refname)
-    evcf_data <- read.delim(evcf, comment.char="#", header=F)
-    if (nrow(evcf_data) > 0) {
+    #evcf_data <- read.delim(evcf, comment.char="#", header=F)
+    evcf_data <- try(read.delim(evcf, comment.char="#", header=F), silent=T)
+    if (!inherits(evcf_data, 'try-error')) {
       variant_found <- 1
+      evcf_data <- evcf_data[, c(1,2,4,5)]
+      colnames(evcf_data) <- c("seqname", "pos", "REF", "ALT")
+      ref_long <- nchar(evcf_data$REF) > max_seqlen2display
+      alt_long <- nchar(evcf_data$ALT) > max_seqlen2display
+      evcf_data$REF[ref_long] <- paste0("long-", nchar(evcf_data$REF)[ref_long], "bp")
+      evcf_data$ALT[alt_long] <- paste0("long-", nchar(evcf_data$ALT)[alt_long], "bp")
+      print(kable(evcf_data, caption=paste("Variants on the sequence from", evcf_refname)))
     }
-    evcf_data <- evcf_data[, c(1,2,4,5)]
-    colnames(evcf_data) <- c("seqname", "pos", "REF", "ALT")
-    ref_long <- nchar(evcf_data$REF) > max_seqlen2display
-    alt_long <- nchar(evcf_data$ALT) > max_seqlen2display
-    evcf_data$REF[ref_long] <- paste0("long-", nchar(evcf_data$REF)[ref_long], "bp")
-    evcf_data$ALT[alt_long] <- paste0("long-", nchar(evcf_data$ALT)[alt_long], "bp")
-    print(kable(evcf_data, caption=paste("Variants on the sequence from", evcf_refname)))
   }
 } else {
   cat("    No variant files found\n")
