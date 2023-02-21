@@ -385,7 +385,8 @@ if (!-d $report_dir) {
 }
 
 # Rmd
-my $rmd = $utilsPath."/homomine_report.Rmd";
+my $rmd = $prefix."/homomine_report.Rmd";
+`cp $utilsPath."/homomine_report.Rmd" $rmd`;
 
 #html report:
 my $report_datadir = $report_dir."/data";
