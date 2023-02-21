@@ -243,7 +243,7 @@ my $uniq_filt_dotplot_pdf = $prefix.".o6.uniq.filt.dotplot.pdf";
 my $blastn_fmt = "6 qseqid qlen sseqid slen length pident qcovs qstart qend sstart send evalue bitscore";
 
 my ($target_start, $target_end);
-my ($query_name,$query_length, $subj_length);
+my ($query_name, $query_length, $subj_length);
 
 if (!exists $opts{noblastn}) {
 	`blastn -db $db -query $query -evalue $evalue -num_threads $threads -outfmt "$blastn_fmt" > $blastn_raw`;
@@ -272,9 +272,11 @@ if (!exists $opts{noblastn}) {
 	
 	# filter 1: chr, match, identity, query coverage, and evalue
 	if (exists $opts{tchr}) {
-		`awk '\$3==\"$target_chr\" && \$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out > $blastn_filt`;
+		`awk '\$3==\"$target_chr\" && \$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out \\
+			perl $utilsPath/redundant.aln.rm.pl - > $blastn_filt`;
 	} else {
-		`awk '\$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out > $blastn_filt`;
+		`awk '\$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out \\
+			perl $utilsPath/redundant.aln.rm.pl - > $blastn_filt`;
 	}
 
 	if (-z $blastn_filt) { # empty?
@@ -413,7 +415,7 @@ if (!exists $opts{noblastn}) {
 }
 
 # final target and bedtools sequence extraction
-print STDERR "  - Final target range is: $target_chr:$target_start-$target_end.\n";
+print STDERR "  - BLAST target range is: $target_chr:$target_start-$target_end.\n";
 
 
 ###############################################

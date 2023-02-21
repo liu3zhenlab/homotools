@@ -1,11 +1,11 @@
 #!/usr/bin/perl -w
 
 # ===============================================================
-# repeatdust.pl
+# redundant.aln.rm.pl
 # Sanzhen Liu
-# 4/17/2021
+# 2/19/2023
 # 
-# usage: perl repeatdust.pl <blast_output> [options]
+# usage: perl redundant.aln.rm.pl <blast_output> [options]
 #
 # ===============================================================
 
@@ -13,13 +13,13 @@ use strict;
 use warnings;
 use Getopt::Long;
 
-my $match = 100;
-my $identity = 80;
-my $coverage = 90;
-my $nrepeat = 5;
-my $identity_col = 6;
+# qseqid qlen sseqid slen length pident qcovs qstart qend sstart send evalue bitscore
+
+my $min_match = 50;
+my $min_coverage = 80;
 my $start_col = 8;
 my $end_col = 9;
+my $bitscore_col = 13;
 my $help;
 
 sub errINF {
@@ -29,26 +29,21 @@ sub errINF {
   - based on BLASTN alignments, compare query segments each other to identify repeats
   - identity and coverage are used to define overlapped query segments in different alignments
   Options:
-  --match|m <num>    : minimum bp match ($match)
-  --identity|i <num> : percentage of identity (0-100) ($identity)
-  --coverage|c <num> : coverage (0-100) ($coverage)
-  --nrepeat|n <num>  : number of repeated alignments ($nrepeat)
-  --identcol|d <num> : column number of identity ($identity_col)
+  --minmatch|m <num> : minimum bp match ($min_match)
+  --mincov|c <num>   : minimum coverage (0-100) of the overlapping region out of the smaller interval ($min_coverage)
   --startcol|s <num> : column number of query start coordinates ($start_col)
   --endcol|e <num>   : column number of query end coordinates ($end_col)
+  --bscol|b <num>    : column number of bitscores ($bitscore_col)
   --help             : Reminding informatioin
-	
 EOF
 }
 
-GetOptions("match|m=i"    => \$match,
-           "identity|i=i" => \$identity,
-           "coverage|c=i" => \$coverage,
-           "nrepeat|n=i"  => \$nrepeat,
-           "identcol|d=i" => \$identity_col,
+GetOptions("minmatch|m=i" => \$min_match,
+           "mincov|c=i"   => \$min_coverage,
 		   "startcol|s=i" => \$start_col,
            "endcol|e=i"   => \$end_col,
-           "help"         => \$help);
+		   "bscol|b=i"    => \$bitscore_col,
+		   "help"         => \$help);
 
 # judge parameters input
 if ($help or @ARGV<1) {
@@ -56,18 +51,25 @@ if ($help or @ARGV<1) {
 	exit;
 }
 
+if (-z $ARGV[0]) { # if an input is an empty file
+	exit;
+}
+
 # blastn output:
-my (@starts, @ends);
+my (@starts, @ends, @bitscore);
 open (IN, $ARGV[0]) || die;
 while (<IN>) {
 	chomp;
 	my @line = split(/\t/, $_);
 	push(@starts, $line[$start_col - 1]);
 	push(@ends, $line[$end_col - 1]);
+	push(@bitscore, $line[$bitscore_col -1]);
 }
 close IN;
 
 # open Query file:
+my $row = 0;
+my %flag_row;
 open (IN, $ARGV[0]) || die;
 while (<IN>) {
 	chomp;
@@ -76,26 +78,44 @@ while (<IN>) {
 	my $end = $line[$end_col - 1];
 	my $repeat_count = -1;
 	for (my $i=0; $i<=$#starts; $i++) {
-		my $is_overlap_alignment = &interval_overlap($start, $end, $starts[$i], $ends[$i], $match, $coverage);
-		$repeat_count += $is_overlap_alignment;
-		if ($repeat_count > $nrepeat) {
-			last;
+		if (!exists $flag_row{$i}) {
+			if ($row != $i) {
+				my $is_overlap = &interval_overlap($start, $end, $starts[$i], $ends[$i], $min_match, $min_coverage);
+				if ($is_overlap) {
+					if ($bitscore[$row] >= $bitscore[$i]) {
+						$flag_row{$i}++;
+					} else {
+						$flag_row{$row}++;
+					}
+				}
+			}
 		}
 	}
-	
-	if ($line[$identity_col - 1] >= $identity and $repeat_count <= $nrepeat) {
+	$row++;
+}
+close IN;
+
+$row = 0;
+open (IN, $ARGV[0]) || die;
+while (<IN>) {
+	chomp;
+	if (!exists $flag_row{$row}) {
 		print "$_\n";
 	}
+	$row++;
 }
 close IN;
 
 sub interval_overlap {
-# input includes 4 numbers
+# input includes 4 numbers and 2 cutoffs
 # first two are increasingly ordered numbers (first interval)
 # second two are increasingly ordered numbers (2nd interval)
-# identity
-# coverage
-	my $is_repeat = 0;
+# two cutoffs are identity and coverage
+#
+# return overlapping codes:
+# 0: no overlap
+# 1: overlap
+	my $overlap_code = 0; # no overlap
 	my @input = @_; # size numbers
 	my $match_cutoff = $input[4];
 	my $coverage_cutoff = $input[5];
@@ -109,19 +129,25 @@ sub interval_overlap {
 		$overlap = 1;
 	}   	
 
-# overlapping length and percentage
+# overlapping length and percentage (coverage)
 	my $overlap_length = 0;
 	my $overlap_perc = 0;
 	if ($overlap) {
 		my @sort_input = sort {$a <=> $b} @input[0..3];
 		$overlap_length = ($sort_input[2] - $sort_input[1] + 1);
-		$overlap_perc = 100 * $overlap_length / ($input[1] - $input[0] + 1);
+		my $len_1 = $input[1] - $input[0] + 1;
+		my $len_2 = $input[3] - $input[2] + 1;
+		if ($len_1 >= $len_2) {
+			$overlap_perc = 100 * $overlap_length / $len_2;
+		} else {
+			$overlap_perc = 100 * $overlap_length / $len_1;
+		}
 	}
 
 # output
 	if ($overlap_length >= $match_cutoff and $overlap_perc >= $coverage_cutoff) {
-		$is_repeat = 1;
+		$overlap_code = 1;
 	}
-	return($is_repeat);
+	return($overlap_code);
 }
 

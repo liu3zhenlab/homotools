@@ -52,7 +52,7 @@ if (!defined $ref or !defined $qry) {
 }
 
 ### check --outdir
-if (($outdir ne ".") and (!-f $outdir)) {
+if (($outdir ne ".") and (!-d $outdir)) {
 	`mkdir $outdir`;
 }
 

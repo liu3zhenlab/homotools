@@ -173,6 +173,7 @@ my $blastn_raw = $prefix."/".$basename.".1.raw.blastn";
 my $blastn_out = $prefix."/".$basename.".1.blastn";
 
 # filtered blastn output
+my $blastn_filt0 = $prefix."/".$basename.".1b.blastn.filt0";
 my $blastn_filt = $prefix."/".$basename.".2.blastn.filt";
 
 # bed file for sequence extraction
@@ -263,9 +264,11 @@ if (!exists $opts{noblastn}) {
 	
 	# filter 1: chr, match, identity, query coverage, and evalue
 	if (exists $opts{tchr}) {
-		`awk '\$3==\"$target_chr\" && \$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out > $blastn_filt`;
+		`awk '\$3==\"$target_chr\" && \$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out > $blastn_filt0`;
+		`perl $utilsPath/redundant.aln.rm.pl $blastn_filt0 > $blastn_filt`;
 	} else {
-		`awk '\$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out > $blastn_filt`;
+		`awk '\$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out > $blastn_filt0`;
+		`perl $utilsPath/redundant.aln.rm.pl $blastn_filt0 > $blastn_filt`;
 	}
 
 	if (-z $blastn_filt) { # empty?

@@ -62,6 +62,7 @@ sub prompt {
     --threads <num>    number of cpus ($threads)
     --bandcol <str>    a valid R color name ($bandcol)
     --version          version information
+    --cleanup          cleanup if specified
     --help             help information.
 EOF
 exit;
@@ -81,7 +82,7 @@ my ($query, $db);
 					"identity=i", "match=i", "coverage=i", "evalue=i",
 					"repeatdust", "expand=i",
                     "prefix=s", "threads=i", "bandcol=s",
-                    "version", "help");
+                    "version", "cleanup", "help");
 
 if (exists $opts{version}) {
 	print "$version\n";
@@ -399,7 +400,7 @@ if (!-d $report_datadir) {
 }
 
 my $cwd = &abs_path("."); # current directory
-my $html_output_dir = $cwd."/".$qrygene;
+my $html_output_dir = $cwd."/".$prefix;
 
 # query input
 my $qry_gene_info_bed = $qry_data_prefix."/3.".$qrygene.".original.bed";
@@ -553,6 +554,12 @@ close TMPR;
 # run
 `Rscript $tmpRscript`;
 
+###############################################
+# cleanup
+###############################################
+if (exists $opts{cleanup}) {
+	`rm -rf $prefix/[1-5]_*`;
+}
 ###############################################
 # module 1: check command availability
 ###############################################
