@@ -203,4 +203,5 @@ The package homotools is distributed under MIT licence.
 ## versions
 0.2.3: allow an automatic choice for strand (plus or minus) in homocomp
 0.2.4: add the module homomine to compare homologs in two genomes and annotate polymorphisms
+0.2.5: change "delta-filter -1" to "delta-filter -r" in the filter for uniquely mapped alignments
 

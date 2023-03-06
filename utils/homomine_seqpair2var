@@ -10,6 +10,7 @@ use warnings;
 use Getopt::Long;
 
 my $help;
+my $aligner = "mafft";
 my $refgeno = "refgeno";
 my $qrygeno = "altgeno";
 my $pos_adj = 1;
@@ -24,6 +25,7 @@ sub prompt {
     --refgeno <str> : genotype of ref; optional
     --qry <file>    : fasta of a query sequence; required
     --qrygeno <str> : genotype of ref; optional
+    --aligner <str> : algorith for the alignment; ($aligner)
     --outdir <str>  : path to outputs ($outdir)
     --prefix <str>  : output prefix ($prefix)
     --posadj <num>  : position adjust by adding this number and substracting 1 ($pos_adj)
@@ -38,6 +40,7 @@ my ($ref, $qry);
 			"refgeno=s" => \$refgeno,
 			"qry=s"     => \$qry,
 			"qrygeno=s" => \$qrygeno,
+			"aligner=s" => \$aligner,
 			"outdir=s"  => \$outdir,
 			"prefix=s"  => \$prefix,
 			"posadj=i"  => \$pos_adj,
@@ -56,9 +59,21 @@ if (($outdir ne ".") and (!-d $outdir)) {
 	`mkdir $outdir`;
 }
 
+### check --aligner
+if ($aligner ne "mafft" and $aligner ne "muscle" and $aligner ne "clustalo") {
+	print STDERR "--aligner must be mafft, muscle, or clustalo\n";
+	exit;
+}
+
 ### generate MSA via muscle
 my $msa = $outdir."/".$prefix.".1.msa";
-`cat $ref $qry | muscle -in - -out $msa -quiet`;
+if ($aligner eq "mafft") {
+	`cat $ref $qry | mafft --quiet - > $msa`;
+} elsif ($aligner eq "muscle") {
+	`cat $ref $qry | muscle -in - -out $msa -quiet`;
+} elsif ($aligner eq "clustalo") {
+	`cat $ref $qry | clustalo -i - > $msa`;
+}
 
 ### read alignment fasta data
 my ($seq, $seqname, $refname, $len, %seqhash, %lenhash);
@@ -68,7 +83,7 @@ while (<IN>) {
 	chomp;
 	if (/^>(\S+)/) {
 		if (defined $seqname) {
-			$seqhash{$seqname} = $seq;
+			$seqhash{$seqname} = uc $seq;
 			$lenhash{$seqname} = $len;
 			push(@seqlen, $len);
 		} else {
@@ -84,7 +99,7 @@ while (<IN>) {
 	}
 }
 # last element:
-$seqhash{$seqname} = $seq;
+$seqhash{$seqname} = uc $seq;
 $lenhash{$seqname} = $len;
 push(@seqlen, $len);
 close IN;

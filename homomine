@@ -20,7 +20,7 @@ use lib "$FindBin::Bin/lib";
 use Cwd;
 use Cwd 'abs_path';
 
-my $version = "0.2.4";
+my $version = "0.2.5";
 
 my $ext5 = 1000;
 my $ext3 = 500;
@@ -512,6 +512,7 @@ my $tgt_sv_te_bed = $report_datadir."/"."SV_on_".$tgtbase.".bed";
 if (-f $tgt_te_bedfile) {
 	`perl  $utilsPath/homomine_vcf2svBED \\
 		--vcf $vars_on_tgt | \\
+		sed 's/^[^\t]*/$tgt_gene/g' | \\
 		bedtools intersect -a - \\
 		-b $tgt_te_bedfile -wao | \\
 		cut -f 1-5,7-9 \\

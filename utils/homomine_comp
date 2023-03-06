@@ -492,7 +492,7 @@ print HIT "transcript\t$select_transcript\n";
 
 # unique and filtered  alignment
 `nucmer --mum --delta $uniq_delta_out --threads $threads $query $target_fas`;
-`delta-filter -1 -i $identity -l $match $uniq_delta_out > $uniq_delta_filt`;
+`delta-filter -r -i $identity -l $match $uniq_delta_out > $uniq_delta_filt`;
 `echo -e "qstart\tqend\tsstart\tsend\tqmatch\tsmatch\tidentity\tqlen\tslen\tqry\tsubj" > $nucmer_uniq_filt_show`;
 `show-coords -HTl $uniq_delta_filt >> $nucmer_uniq_filt_show`;
 

@@ -68,7 +68,7 @@ if (file.exists(tgthit)) {
   kable(tgt_data)
 } else {
   cat(paste(tgthit, " does not exist\n"))
-  knitr::knit_exit()
+  knit_exit()
 }
 ```
 
@@ -80,9 +80,22 @@ write.table(qt_data, qt_data_outfile, row.names=F, quote=F, sep="\t")
 ```
 
 ### o Virsualization of Nucmer alignments
+```{r alncheck, echo=F, comment=""}
+# check alignment
+aln_check <- read.delim(nucmeraln, header=F)
+if (nrow(aln_check)==1) {
+  cat(" no alignments are in the Nucmer output (uniqure and filted output)\n")
+  knit_exit()
+}
+```
+
 ```{r comp, echo=F, comment="", fig.height=3, fig.width=6, fig.cap="Fig 1. Nucmer alignment."}
 source(paste0(scriptdir, "/homomine_nucmerplot.R"))
+# plotting
 outpdf <- paste0(qrygene, "_to_", tgtbase, "nucmer.pdf")
+homomine_nucmerplot(datafile=nucmeraln, qrybed=qrybed, tgtbed=tgtbed,
+                    outpath=figuredir, ispdf=T, imageoutfile=outpdf)
+
 homomine_nucmerplot(datafile=nucmeraln, qrybed=qrybed, tgtbed=tgtbed,
                     outpath=figuredir, ispdf=F, imageoutfile=outpdf)
 ```
