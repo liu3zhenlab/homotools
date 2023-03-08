@@ -33,7 +33,7 @@ conda install -c anaconda perl
 conda install -c conda-forge openjdk=11.0.2
 conda install -c r r-base
 conda install -c bioconda blast mummer bedtools
-conda install -c bioconda cd-hit bioconda mafft
+conda install -c bioconda cd-hit mafft
 ```
 
 #### download homotools and run scripts
