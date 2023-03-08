@@ -148,12 +148,11 @@ for (my $pos=1; $pos<=$seqlen; $pos++) {
 				my $cur_alt_base = $alt_base{$pos}{$eseqname};
 				#print "\t$cur_alt_base";
 				if ($cur_alt_base ne $ref_base{$pos}) {
-					$polymorphic_site_ref{$eseqname}{$ref_pos{$pos}} = $ref_base{$pos};
-					$polymorphic_site_alt{$eseqname}{$ref_pos{$pos}} = $cur_alt_base;
+					$polymorphic_site_ref{$eseqname}{$ref_pos{$pos}} .= $ref_base{$pos};
+					$polymorphic_site_alt{$eseqname}{$ref_pos{$pos}} .= $cur_alt_base;
 				}
 			}
 		}
-		#print "\n";
 	}
 }
 

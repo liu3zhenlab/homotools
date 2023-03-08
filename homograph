@@ -4,6 +4,7 @@
 #
 # Author: Sanzhen Liu <liu3zhen@ksu.edu>
 # 8/27/2021
+# major update on 3/6/2023
 #
 # The Perl script to plot a haplotype graph
 #======================================================================
@@ -18,17 +19,12 @@ use lib "$FindBin::Bin/lib";
 #use genegtfadjust;
 #use maxbed;
 
-my $version = "0.2.5";
+my $version = "0.2.4";
 
 my $prefix = "hgout";
 my $threads = 1;
-my $minigraph_para ="-xggs -t1 -j 0.2 -l 100";
 my $cdhit_para = "-g 1 -s 0.8 -c 0.8 -r 0";
-my $pggb_para_p_s = "-p 90 -s 1000";
 my $main_label = "haplotype graph";
-my $refgap_prop = 0.02;
-my $nonrefgap_prop = 0.05;
-my $maxseg_prop = 0.5;
 
 # $refgap_prop $nonrefgap_prop $maxseg_prop $main_label $gene_gtf
 
@@ -38,16 +34,11 @@ sub prompt {
     [Options]
     --dir <path>      path to a collection of fasta files with suffix of .fa, .fas, or .fasta; required
     --ref <file>      fasta file of the reference sequence; required
-    --mgpara <str>    minigraph parameters ($minigraph_para)
-    --cdhitpara <str> parameters for cd-hit-est ($cdhit_para)
-    --pggbpara <str>  parameters for -p and -s in pggb ($pggb_para_p_s)
     --gene_gtf <file> gtf file of gene structure using coordinates on --ref; optional
+    --cdhitpara <str> parameters for cd-hit-est ($cdhit_para)
     --threads <num>   number of threads ($threads)
     --prefix <str>    prefix of outputs ($prefix)
     --main_label <float>     label to add as the title of haplotype plotting figure ($main_label)
-    --refgap_prop <float>    ratio of each gap between segments to the canvas x length ($refgap_prop)
-    --nonrefgap_prop <float> ratio of each gap between segments to the canvas x length ($nonrefgap_prop)
-    --maxseg_prop <float>    proprotion of the maxium fragment that will not be shortened segments to the canvas x length ($maxseg_prop)
     --version         version information
     --help:           help information
 EOF
@@ -60,10 +51,9 @@ exit;
 my %opts = ();
 my ($query, $db);
 
-&GetOptions(\%opts, "dir=s", "ref=s", "mgpara=s", "gene_gtf=s",
+&GetOptions(\%opts, "dir=s", "ref=s", "gene_gtf=s",
                     "threads=i", "prefix=s", "main_label=s",
-					"refgap_prop=f", "nonrefgap_prop=f", "maxseg_prop=f",
-                    "cdhitpara=s", "pggbpara=s",
+                    "cdhitpara=s",
 					"version", "help");
 
 if (exists $opts{version}) {
@@ -103,23 +93,16 @@ if ((!exists $opts{dir}) or (!exists $opts{ref})) {
 
 $prefix = $opts{prefix} if exists $opts{prefix};
 $threads = $opts{threads} if exists $opts{threads};
-$minigraph_para = $opts{mgpara} if exists $opts{mgpara};
-$refgap_prop = $opts{refgap_prop} if exists $opts{refgap_prop};
-$nonrefgap_prop = $opts{nonrefgap_prop} if exists $opts{nonrefgap_prop};
-$maxseg_prop = $opts{maxseg_prop} if exists $opts{maxseg_prop};
 my $gene_gtf = "NULL";
 $gene_gtf = $opts{gene_gtf} if exists $opts{gene_gtf};
 
 ###############################################
 # check requirments
 ###############################################
-&cmd_check("minigraph");
 &cmd_check("Rscript");
 &cmd_check("sed");
 &cmd_check("awk");
-&cmd_check("minigraph");
 &cmd_check("cd-hit-est");
-&cmd_check("pggb");
 
 &runreport("Requirement checked");
 
@@ -144,6 +127,9 @@ my $utilsPath = $scriptPath."/utils/";
 ###############################################
 # intermediate output
 ###############################################
+# msa alignment
+
+
 # GFA output
 my $gfa_outfile = $prefix."/".$prefix.".1.gfa";
 
@@ -153,13 +139,6 @@ my $plot_pdf = $prefix."/".$prefix.".2.minigraph.pdf";
 # cd-hit output prefix
 my $cdhit_infasta = $prefix."/".$prefix.".3.cdhit.in.fasta";
 my $cdhit_out = $prefix."/".$prefix.".3.cdhit.out";
-#my $cdhit_out_ncluster = $cdhit_out.".ncluster";
-#my $cdhit_out_fasta = $cdhit_out.".fasta";
-
-# pggb output
-my $pggb_infile = $prefix.".4.pggb.in.fasta";
-my $pggb_infasta = $prefix."/".$pggb_infile;
-my $pggb_out = $prefix."/".$prefix.".4.pggb.out";
 
 ###############################################
 # minigraph to gfa
