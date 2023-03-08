@@ -5,11 +5,12 @@
 
 The package is dedicated to structurally compare sequences of homologous genes from different genomes of a species. Briefly, the package has been developed to perform the following analyses.
 
-1. The script **geneseq** can extract gene sequence, gene annotation, other featured data in GTF/GFF and BED format, transcribed sequences, protein sequences, and gene sequences with transcribed sequences highlighted. The positions of gene annotation and other features are adjusted to the coordinates relative to the newly extracted sequences.
-2. The script **homocomp** implements homologous searching and visualization of the comparison. With a query gene sequence, homologous sequences can be identified in a genome. The homologous gene could be found if a related GTF is supplied. The alignment between two homologous regions are plotted.
-3. The script **homosnpeff** finds and annotates variants between query and reference sequences.
-4. The script **homograph** visualizes alignments of homologous sequences, determines number of haplotypes, and views the haplotype graph. This module is still under development.
-5. The script **homostack** visualizes alignments among multiple homologous sequences.
+1. **geneseq** can extract gene sequence, gene annotation, other featured data in GTF/GFF and BED format, transcribed sequences, protein sequences, and gene sequences with transcribed sequences highlighted. The positions of gene annotation and other features are adjusted to the coordinates relative to the newly extracted sequences.
+2. **homocomp** implements homologous searching and visualization of the comparison. With a query gene sequence, homologous sequences can be identified in a genome. The homologous gene could be found if a related GTF is supplied. The alignment between two homologous regions are plotted.
+3. **homosnpeff** finds and annotates variants between query and reference sequences.
+4. **homomine** search the best homolog in a targeted genome, identify and annotate polymorphisms, including SNP, INDEL, and structural variation (SV)
+5. **homostack** visualizes alignments among multiple homologous sequences.
+6. **homograph** visualizes alignments of homologous sequences, determines number of haplotypes, and views the haplotype graph. This module is still under development.
 
 ## Motivation
 
@@ -17,7 +18,9 @@ The development of **homotools** was motivated by the tedious procedure for extr
 
 ## Requirements and installation
 
-Shell scripts, Perl, and R were combined for the development. Both Perl and R are generally installed. If needed, please refer to [Perl](https://www.perl.org/) and [R](https://www.r-project.org/) for installation guides. [BLAST+](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/), [MURmer](http://mummer.sourceforge.net/), [BEDtools](https://bedtools.readthedocs.io/en/latest/) are also required.
+Shell scripts, Perl, and R were combined for the development. Both Perl and R are generally installed. If needed, please refer to [Perl](https://www.perl.org/) and [R](https://www.r-project.org/) for installation guides. [Java](https://www.java.com/en/download/) is required to run SNPEff. [BLAST+](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/), [MURmer](http://mummer.sourceforge.net/), [BEDtools](https://bedtools.readthedocs.io/en/latest/) are also required.
+
+To run **homomine**, the multiple sequence aligner [MAFFT](https://mafft.cbrc.jp/alignment/software) is required.
 
 To run **homograph**, [cd-hit](http://weizhong-lab.ucsd.edu/cd-hit/) and [pggb](https://github.com/pangenome/pggb) are required.
 
@@ -27,9 +30,10 @@ Aternatively, all required packages can be installed through [conda](https://doc
 conda create -n homotools
 conda activate homotools
 conda install -c anaconda perl
+conda install -c conda-forge openjdk=11.0.2
 conda install -c r r-base
 conda install -c bioconda blast mummer bedtools
-conda install -c bioconda cd-hit pggb
+conda install -c bioconda cd-hit bioconda mafft
 ```
 
 #### download homotools and run scripts

@@ -187,7 +187,7 @@ my $utilsPath = $scriptPath."/utils/";
 # check requirments
 ###############################################
 &cmd_check("java");
-&cmd_check("muscle");
+&cmd_check("mafft");
 &cmd_check("blastn");
 &cmd_check("nucmer");
 &cmd_check("R");
