@@ -1,0 +1,264 @@
+#!/usr/bin/perl -w
+# ====================================================================================================
+# File: homograph_msa2block
+# Author: Sanzhen Liu
+# Date: 3/9/2023
+# ====================================================================================================
+
+use strict;
+use warnings;
+use Getopt::Long;
+
+my $help;
+my $refname = "ref";
+my $outdir = ".";
+my $prefix = "spv";
+my $absence_char = "-";
+
+sub prompt {
+    print <<EOF;
+    Usage: perl $0 --msa <fasta> [options]
+    --msa <file>    : msa fasta input; required
+    --refname <str> : genotype of ref; optional
+    --outdir <str>  : path to outputs ($outdir)
+    --prefix <str>  : output prefix ($prefix)
+    --outfile <file>: output block information with polymorphism information ($prefix.aln.block.polymorphism.bed)
+    --help          : help information
+
+notes:
+    The scripts input MSA fasta data and output a BED-similar formatted file.
+    Alignment segments: alignment regions with no gaps for each taxon 
+    Block: alignment segments from all taxa to divide alignment segments to smaller regions,
+           each of which does not span multiple alignment segments
+
+    The output include the following columns:
+    1. taxon name
+    2. 0-based start position of each alignment segment
+    3. 1-based end position of each alignment segment
+    4. block 0-based start position of each block
+    5. block 1-baed end position of each block
+    6. Number of polymorphic sites in the block, which do count absence sequence regions
+    7. Number of sites with genotypes different from the consensus type, which is a major type from non-absence bases.
+       the same nmber of the difference does not mean the same genotype.
+EOF
+exit;
+}
+
+# read parameters:
+my ($msa, $outfile);
+&GetOptions("msa=s"     => \$msa,
+			"refname=s" => \$refname,
+			"outdir=s"  => \$outdir,
+			"outfile=s" => \$outfile,
+			"prefix=s"  => \$prefix,
+			"help|h"    => \$help) || &prompt;
+
+####################################################
+# check input
+####################################################
+if ($help) { &prompt; }
+
+### check required input
+if (!defined $msa) {
+	print STDERR "--msa is required\n";
+	exit;
+}
+
+### check --outdir
+if (($outdir ne ".") and (!-d $outdir)) {
+	`mkdir $outdir`;
+}
+
+####################################################
+# intermediate outputs
+####################################################
+my $alnseg_bed = $outdir."/".$prefix."_tmp1.alnseg.bed";
+open(ALNSEG, ">", $alnseg_bed) || die;
+
+my $block_bed = $outdir."/".$prefix."_tmp2.block.bed";
+open(BLOCK, ">", $block_bed) || die;
+
+my $alnblock_polymorphism_bed = $outdir."/".$prefix.".aln.block.polymorphism.bed";
+if (defined $outfile) {
+	$alnblock_polymorphism_bed = $outdir."/".$outfile;
+}
+
+####################################################
+### read alignment fasta data
+####################################################
+my ($seq, $seqname, $len, %seqhash, %lenhash);
+my (@seqnames, @seqlen);
+open(IN, "<", $msa) || die;
+while (<IN>) {
+	chomp;
+	if (/^>(\S+)/) {
+		if (defined $seqname) {
+			$seqhash{$seqname} = uc $seq;
+			$lenhash{$seqname} = $len;
+			push(@seqlen, $len);
+		} else {
+			if (!defined $refname) {
+				$refname = $1; # 1st one is ref
+			}
+		}
+    	$seqname = $1;
+		push(@seqnames, $seqname);
+		$seq = "";
+		$len = 0;
+ 	 } else {
+		$seq .= $_;
+		$len += length($_);
+	}
+}
+# last element:
+$seqhash{$seqname} = uc $seq;
+$lenhash{$seqname} = $len;
+push(@seqlen, $len);
+close IN;
+
+####################################################
+### process aln fasta data
+# each alignment segment with no gaps are "alnseg" 
+####################################################
+my (%ref_base, @ref_base, %ref_pos, %alnpos2refpos);
+my %pos_taxon_base;
+my %all_uniq_base;
+my ($alnseg_start_pos0, $alnseg_start_pos, $alnseg_end_pos);
+my (%alnseg_start_pos, %alnseg_end_pos, %block_pos);
+
+# ref information
+if (exists $seqhash{$refname}) {
+	my $aln_pos = 0;
+	my $ref_pos = $pos_adj - 1;
+	@ref_base = split(//, $seqhash{$refname});
+	foreach (@ref_base) {
+		$aln_pos++;
+		if ($_ ne $absence_char) {
+			$ref_pos++;
+		}
+		$alnpos2refpos{$aln_pos} = $ref_pos;
+		$ref_base{$aln_pos} = $_;
+		$ref_pos{$aln_pos} = $ref_pos;
+		#$all_uniq_base{$aln_pos}{$_}++;
+	}
+}
+
+# alignment segments of each sequence
+foreach my $eachseq (@seqnames) {
+	my $aln_pos = 0;
+	my $prev_pos = 1;
+	my $prev_base = $absence_char;
+
+	my @seq_base = split(//, $seqhash{$eachseq});
+	foreach (@seq_base) {
+		$aln_pos++;
+		if ($_ ne $absence_char) {
+			if ($prev_base eq $absence_char) {
+				$alnseg_start_pos = $aln_pos;
+				$alnseg_start_pos0 = $alnseg_start_pos - 1;
+				$alnseg_start_pos{$alnseg_start_pos}++;
+				$block_pos{$alnseg_start_pos}++;
+			}
+			# last segment if it is at the end
+			if ($aln_pos == ($#seq_base + 1)) {
+				$alnseg_end_pos = $aln_pos;
+				$alnseg_end_pos{$alnseg_end_pos}++;
+				$block_pos{$alnseg_end_pos}++;
+				print ALNSEG "$eachseq\t$alnseg_start_pos0\t$alnseg_end_pos\n";
+			}
+		} else { # gap
+			if ($prev_base ne $absence_char) {
+				$alnseg_end_pos = $prev_pos;
+				$alnseg_end_pos{$alnseg_end_pos}++;
+				$block_pos{$alnseg_end_pos}++;
+				print ALNSEG "$eachseq\t$alnseg_start_pos0\t$alnseg_end_pos\n";
+			}
+		}
+		$prev_pos = $aln_pos;
+		$prev_base = $_;
+		$pos_taxon_base{$aln_pos}{$eachseq} = $_;
+		if ($_ ne $absence_char) {
+			$all_uniq_base{$aln_pos}{$_}++;
+		}
+	}
+}
+
+#########################################
+# identify polymorphic sites:
+# determine major alleles as consensus
+#########################################
+my %major_allele;
+my @seqlen_sort = sort { $b <=> $a } @seqlen;
+my $seqlen = $seqlen_sort[0];
+for (my $pos=1; $pos<=$seqlen; $pos++) {
+	my %all_bases_count = %{$all_uniq_base{$pos}};
+	my @all_bases = sort { $all_bases_count{$b} <=> $all_bases_count{$a} } keys %all_bases_count;
+	if ($#all_bases > 0) { # if multiple non-missing alleles
+		$major_allele{$pos} = $all_bases[0];	
+	}
+}
+
+##################################
+# block typing
+##################################
+my @block_pos = sort { $a <=> $b } keys %block_pos;
+
+if (@block_pos) { # multiple blocks
+	# go through each block
+	for (my $i=0; $i<$#block_pos; $i++) { # last position will be missed
+		my %diff_w_consensus_count = ();
+		my $block_start = $block_pos[$i];
+		#if (exists $block_ends_collected{$block_start}) {
+		if (exists $alnseg_end_pos{$block_start}) {
+			$block_start += 1;
+		}
+		my $block_end = $block_pos[$i + 1];
+		if (exists $alnseg_start_pos{$block_end}) {
+			$block_end -= 1;
+		}
+		my $block_polymorphic_count = 0;
+		# go through each position in a block
+		for (my $bpos=$block_start; $bpos<=$block_end; $bpos++) {
+			my %taxon_bases = %{$pos_taxon_base{$bpos}};
+			if (exists $major_allele{$bpos}) {
+				$block_polymorphic_count++;
+				# go through individual samples
+				foreach my $taxon (@seqnames) {
+					my $taxon_base = $taxon_bases{$taxon};
+					if ($taxon_base eq $absence_char) {
+						$diff_w_consensus_count{absence}{$taxon}++;
+					} elsif ($taxon_base ne $major_allele{$bpos}) {
+						$diff_w_consensus_count{substitute}{$taxon}++;
+					}
+				}
+			}
+			
+		}
+		
+		# go through each sequence:
+		foreach my $taxon (@seqnames) {
+			my $polymorphic_absence_count = 0;
+			if (exists $diff_w_consensus_count{absence}{$taxon}) {
+				$polymorphic_absence_count = $diff_w_consensus_count{absence}{$taxon};
+			}
+
+			my $polymorphic_substitute_count = 0;
+			if (exists $diff_w_consensus_count{substitute}{$taxon}) {
+				$polymorphic_substitute_count = $diff_w_consensus_count{substitute}{$taxon};
+			}
+			my $block_start0 = $block_start - 1;
+			print BLOCK "$taxon\t$block_start0\t$block_end\t$block_polymorphic_count\t$polymorphic_substitute_count\t$polymorphic_absence_count\n";
+		}
+	}
+}
+
+close ALNSEG;
+close BLOCK;
+
+####################################################
+# alignment segments annotated with block typing
+####################################################
+`bedtools intersect -a $alnseg_bed -b $block_bed -wao | cut -f 1-3,5-8 > $alnblock_polymorphism_bed`;
+unlink $alnseg_bed;
+unlink $block_bed;
+

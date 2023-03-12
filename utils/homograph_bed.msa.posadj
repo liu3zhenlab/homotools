@@ -1,0 +1,117 @@
+#!/usr/bin/perl -w
+# ====================================================================================================
+# File: homograph_msa2block
+# Author: Sanzhen Liu
+# Date: 3/9/2023
+# ====================================================================================================
+
+use strict;
+use warnings;
+use Getopt::Long;
+
+my $absence_char = "-";
+
+sub prompt {
+    print <<EOF;
+    Usage: perl $0 --msa <fasta> [options]
+    --msa|m <file>    : msa fasta input; required
+    --bed|b <file>    : BED file; required
+    --refname|r <str> : genotype of ref; required
+    --char|c <str>    : character representing missing bases (gaps) ($absence_char)
+    --help|h          : help information
+EOF
+exit;
+}
+
+# read parameters:
+my ($msa, $bed, $refname, $help);
+&GetOptions("msa|m=s"     => \$msa,
+			"refname|r=s" => \$refname,
+			"bed|b=s"     => \$bed,
+			"char|c=s"    => \$absence_char,
+			"help|h"      => \$help) || &prompt;
+
+####################################################
+# check input
+####################################################
+if ($help) { &prompt; }
+
+### check required input
+if (!defined $msa || !defined $bed || !defined $refname) {
+	print STDERR "--msa, --bed, --refname are required\n";
+	exit;
+}
+
+####################################################
+### read alignment fasta data
+####################################################
+my ($seq, $seqname, $len, %seqhash, %lenhash);
+my (@seqnames, @seqlen);
+open(IN, "<", $msa) || die;
+while (<IN>) {
+	chomp;
+	if (/^>(\S+)/) {
+		if (defined $seqname and $seqname eq $refname) {
+			$seqhash{$seqname} = uc $seq;
+			$lenhash{$seqname} = $len;
+			push(@seqlen, $len);
+		}
+    	$seqname = $1;
+		push(@seqnames, $seqname);
+		$seq = "";
+		$len = 0;
+ 	 } else {
+		$seq .= $_;
+		$len += length($_);
+	}
+}
+# last element:
+if ($seqname eq $refname) {
+	$seqhash{$seqname} = uc $seq;
+	$lenhash{$seqname} = $len;
+	push(@seqlen, $len);
+}
+close IN;
+
+####################################################
+### process aln fasta data
+# each alignment segment with no gaps are "alnseg" 
+####################################################
+#my (%ref2alnpos);
+if (exists $seqhash{$refname}) {
+	my $aln_pos = 0;
+	my $alnseg_start = 0;
+	my $refstart = 0;
+	my $prev_base = $absence_char;
+	my $cur_refpos = 0;
+	my @ref_base = split(//, $seqhash{$refname});
+	foreach (@ref_base) {
+		$aln_pos++;
+		if ($_ ne $absence_char) { # cur != gap
+			$cur_refpos++;
+			#$ref2alnpos{$cur_refpos} = $aln_pos;
+			if ($prev_base eq $absence_char) { # prev == gap
+				$alnseg_start = $aln_pos;
+				$refstart = $cur_refpos;
+			}
+			# last base
+			if ($aln_pos == $lenhash{$refname}) {
+				my $refstart0 = $refstart - 1;
+				my $refend = $cur_refpos;
+				my $alnseg_start0 = $alnseg_start - 1;
+				my $alnseg_end = $aln_pos;
+				print "$refname\t$refstart0\t$refend\t$alnseg_start0\t$alnseg_end\n";
+			}
+		} elsif ($prev_base ne $absence_char) { # cur == gap; pre != gap
+			my $refstart0 = $refstart - 1;
+			my $refend = $cur_refpos;
+			my $alnseg_start0 = $alnseg_start - 1;
+			my $alnseg_end = $aln_pos - 1;
+			print "$refname\t$refstart0\t$refend\t$alnseg_start0\t$alnseg_end\n";
+		}
+		$prev_base = $_;
+	}
+} else {
+	print STDERR "Sequences of $refname do not exists\n";
+}
+
