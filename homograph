@@ -1,0 +1,266 @@
+#!/usr/bin/perl -w
+#======================================================================
+# homograph
+#
+# Author: Sanzhen Liu <liu3zhen@ksu.edu>
+# 8/27/2021
+# major update on 3/6/2023
+# 
+# The Perl script to plot a haplotype graph
+#======================================================================
+
+use strict;
+use warnings;
+use Getopt::Long;
+use File::Temp;
+use Term::ANSIColor qw(:constants);
+use FindBin;
+use lib "$FindBin::Bin/lib";
+#use genegtfadjust;
+#use maxbed;
+
+my $version = "0.2.6beta";
+
+my $prefix = "hgout";
+my $threads = 1;
+my $msatool = "muscle";
+my $cdhit_para = "-g 1 -s 0.8 -c 0.8 -r 0";
+my $title = "Alignmens of multiple sequences";
+
+# $refgap_prop $nonrefgap_prop $maxseg_prop $main_label $genebed
+
+sub prompt {
+    print <<EOF;
+    Usage: perl $0 --dir <dir_containing_fasta_files> [options]
+    [Options]
+    --fasdir <path>   path to a collection of non-ref fasta files with suffix of .fa, .fas, or .fasta; required
+    --ref <file>      fasta file of the reference sequence; required
+    --genebed <file>  bed file of gene structure using coordinates on --ref; optional
+                      chr start(0-based) end(1-based) label height(0.01-0.1) strand(+/-) color(R compatible)
+     --cdhitpara <str> parameters for cd-hit-est ($cdhit_para)
+    --msatool <str>   software tool for multiple sequencee alignment: muscle or mafft ($msatool)
+    --threads <num>   number of threads ($threads)
+    --prefix <str>    prefix of outputs ($prefix)
+    --title <str>     label to add as the title of haplotype plotting figure ($title)
+    --version         version information
+    --help:           help information
+EOF
+exit;
+}
+
+###############################################
+# parameters:
+###############################################
+my %opts = ();
+my ($query, $db);
+
+&GetOptions(\%opts, "fasdir=s", "ref=s", "genebed=s",
+                    "threads=i", "prefix=s", "title=s",
+                    "cdhitpara=s", "msatool=s",
+					"version", "help");
+
+if (exists $opts{version}) {
+	print "$version\n";
+	exit;
+}
+
+&prompt if exists $opts{help} or !%opts;
+
+my ($fas_dir, $fasta_files, $nfasta, $ref);
+if ((!exists $opts{fasdir}) or (!exists $opts{ref})) {
+	print STDERR RED, "--fasdir and --ref are required\n", RESET;
+	&prompt;
+} else {
+	$fas_dir= $opts{fasdir};
+	if (!-d $fas_dir) {
+		print STDERR RED, "$fas_dir does not exist\n", RESET;
+		exit;
+	} else {
+		$fasta_files=`find $fas_dir -mindepth 1 -maxdepth 1 \\( -name "*\\.fa" -o -name "*\\.fas" -o -name "*\\.fasta" \\) | tr "\n" " "`;
+		chomp $fasta_files;
+		
+		# number of fasta files
+		if ($fasta_files eq "") {
+			print STDERR RED, "no fasta files found in $fas_dir\n", RESET;
+			exit;
+		}
+	}
+
+	$ref = $opts{ref};
+	if (!-f $ref) {
+		print STDERR RED, "$ref does not exist\n", RESET;
+		exit;
+	}
+}
+
+$prefix = $opts{prefix} if exists $opts{prefix};
+$threads = $opts{threads} if exists $opts{threads};
+my $genebed;
+if (exists $opts{genebed}) {
+	$genebed = $opts{genebed};
+	if ( !-f $genebed) {
+		print STDERR "$genebed does not exist\n";
+	}
+}
+
+if (exists $opts{msatool}) {
+	$msatool = $opts{msatool};
+	if ($msatool ne "muscle" and $msatool ne "mafft") {
+		print STDERR RED, "msatool must be either muscle or mafft\n", RESET;
+		exit;
+	}
+}
+
+###############################################
+# check requirments
+###############################################
+&cmd_check("java");
+&cmd_check("Rscript");
+&cmd_check("$msatool");
+&cmd_check("sed");
+&cmd_check("awk");
+&cmd_check("cd-hit-est");
+
+&runreport("Requirement checked");
+
+###############################################
+# preparation
+###############################################
+# create a directory for outputs
+if (-d $prefix) {
+	print STDERR RED, "Warning: the directory $prefix exists.\n", RESET;
+	#`rm -rf $prefix`;
+} else {
+	`mkdir $prefix`;
+}
+
+# script path:
+my $scriptPath = $FindBin::Bin;
+my $utilsPath = $scriptPath."/utils/";
+
+&runreport("step 01: prepare to run homograph");
+
+###############################################
+# intermediate output
+###############################################
+# cd-hit output prefix
+my $cdhit_infasta = $prefix."/".$prefix.".0.in.fasta";
+my $cdhit_prefix = $prefix."/".$prefix.".1.cdhit.out";
+my $cdhit_out_fasta = $cdhit_prefix.".fasta";
+my $cdhit_out_info = $cdhit_prefix.".clust.info";
+
+# msa alignment
+my $all_msa_out = $prefix."/".$prefix.".2.msa";
+my $msa_block_out = $prefix."/".$prefix.".2.msa.block";
+
+# blocktyping output
+my $block_out = $prefix.".3.blocktyping";
+
+# Coordinate-adjusted BED
+my $adjusted_genebed = $prefix."/".$prefix.".4.gene.bed";
+
+# plotting PDF output
+my $outpdf = $prefix."/".$prefix.".5.msa.pdf";
+
+###############################################
+# cd-hit haplotypes
+###############################################
+
+&runreport("step 03: run cd-hit to cluster sequences");
+
+`cat $fasta_files $ref > $cdhit_infasta`;
+#my $cdhit_para = "-g 1 -s 0.8 -c 0.8 -r 0";
+`cd-hit-est -i $cdhit_infasta -o $cdhit_prefix $cdhit_para`;
+
+# modify sequence names for pggb
+`perl $utilsPath/cdhit2seq.pl --fasta $cdhit_infasta \\
+	--clust $cdhit_prefix.clstr \\
+	--clustinfo $cdhit_out_info --clustseq $cdhit_out_fasta`;
+my $ncluster = `grep "^>Cluster" -c $cdhit_prefix.clstr`;
+chomp $ncluster;
+
+###############################################
+# determine the new ref name
+###############################################
+my ($refname, $new_refname);
+
+open(REF, $ref) || die;
+while (<REF>) {
+	if (/^>(.+)/) {
+		$refname = $1;
+	} else {
+		print STDERR RED, "$ref does not have a standard FASTA format\n", RESET;
+	}
+}
+
+open(INFO, $cdhit_out_info) || die;
+while (<INFO>) {
+	chomp;
+	my @line = split(/\t/, $_);
+	if ($line[1] eq $refname) {
+		$new_refname = $line[0]."_".$line[1];
+	}
+}
+close INFO;
+
+###############################################
+# multiple sequence alignment 
+###############################################
+&runreport("step 04: run MSA");
+#if ($msatool eq "muscle") {
+#	`muscle -quiet -in $cdhit_out_fasta -out $all_msa_out`;
+#} elsif ($msatool eq "mafft") {
+	# --maxiterate 1000
+#	`mafft --thread $threads --genafpair --quiet $cdhit_out_fasta > $all_msa_out`;
+#}
+
+###############################################
+# blocktyping
+###############################################
+&runreport("step 05: alignment blocktyping");
+`perl $utilsPath/homograph_msa2block --msa $all_msa_out \\
+	--outdir $prefix --outfile $block_out`;
+
+###############################################
+# 
+###############################################
+if (exists $opts{genebed}) {
+	&runreport("step 06: alignment blocktyping");
+	`perl $utilsPath/homograph_bed.msa.posadj \\
+		--msa $all_msa_out \\
+		--bed $genebed \\
+		--refname $new_refname \\
+		> $adjusted_genebed`;
+}
+###############################################
+# R visualization
+###############################################
+&runreport("visualization of alignments");
+`Rscript $utilsPath/homograph_msa.plot.R $prefix/$block_out \\
+	$adjusted_genebed "$title" $outpdf`;
+
+&runreport("finish running");
+###############################################
+# module 1: check command availability
+###############################################
+sub cmd_check {
+	my $cmd = shift;
+	my $cmdPath=`which $cmd 2>/dev/null`;
+	if (!$cmdPath) {# not founded
+		print STDERR RED, "  $cmd is not found\n", RESET;
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	}
+}
+
+###############################################
+# module 2: report running result
+###############################################
+# funtion to report running return
+sub runreport {
+	my $injob = shift;
+    my $dateinfo = `date +'o %Y-%m-%d %H:%M:%S'`;
+	print STDERR MAGENTA, "$dateinfo", RESET;
+	print STDERR "  $injob.\n";
+}
+
