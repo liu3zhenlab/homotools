@@ -129,7 +129,7 @@ my (%alnseg_start_pos, %alnseg_end_pos, %block_pos);
 # ref information
 if (exists $seqhash{$refname}) {
 	my $aln_pos = 0;
-	my $ref_pos = $pos_adj - 1;
+	my $ref_pos = 0;
 	@ref_base = split(//, $seqhash{$refname});
 	foreach (@ref_base) {
 		$aln_pos++;
@@ -139,7 +139,6 @@ if (exists $seqhash{$refname}) {
 		$alnpos2refpos{$aln_pos} = $ref_pos;
 		$ref_base{$aln_pos} = $_;
 		$ref_pos{$aln_pos} = $ref_pos;
-		#$all_uniq_base{$aln_pos}{$_}++;
 	}
 }
 

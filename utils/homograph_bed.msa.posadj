@@ -18,17 +18,19 @@ sub prompt {
     --bed|b <file>    : BED file; required
     --refname|r <str> : genotype of ref; required
     --char|c <str>    : character representing missing bases (gaps) ($absence_char)
+    --namecheck|n     : if specified, sequence names in the BED file will be matched to --refname
     --help|h          : help information
 EOF
 exit;
 }
 
 # read parameters:
-my ($msa, $bed, $refname, $help);
+my ($msa, $bed, $refname, $namecheck, $help);
 &GetOptions("msa|m=s"     => \$msa,
 			"refname|r=s" => \$refname,
 			"bed|b=s"     => \$bed,
 			"char|c=s"    => \$absence_char,
+			"namecheck"   => \$namecheck,
 			"help|h"      => \$help) || &prompt;
 
 ####################################################
@@ -77,41 +79,77 @@ close IN;
 ### process aln fasta data
 # each alignment segment with no gaps are "alnseg" 
 ####################################################
-#my (%ref2alnpos);
+my (%ref2alnpos, %alnseg_start, %alnseg_end);
 if (exists $seqhash{$refname}) {
 	my $aln_pos = 0;
 	my $alnseg_start = 0;
 	my $refstart = 0;
 	my $prev_base = $absence_char;
 	my $cur_refpos = 0;
+	my $alnseg_id = 0;
 	my @ref_base = split(//, $seqhash{$refname});
 	foreach (@ref_base) {
 		$aln_pos++;
 		if ($_ ne $absence_char) { # cur != gap
 			$cur_refpos++;
-			#$ref2alnpos{$cur_refpos} = $aln_pos;
+			$ref2alnpos{$cur_refpos} = $aln_pos;
 			if ($prev_base eq $absence_char) { # prev == gap
 				$alnseg_start = $aln_pos;
 				$refstart = $cur_refpos;
 			}
-			# last base
+			# last base 
 			if ($aln_pos == $lenhash{$refname}) {
-				my $refstart0 = $refstart - 1;
-				my $refend = $cur_refpos;
-				my $alnseg_start0 = $alnseg_start - 1;
-				my $alnseg_end = $aln_pos;
-				print "$refname\t$refstart0\t$refend\t$alnseg_start0\t$alnseg_end\n";
+				$alnseg_id++;
+				$alnseg_start{$alnseg_id} = $alnseg_start;
+				$alnseg_end{$alnseg_id} = $aln_pos;
 			}
 		} elsif ($prev_base ne $absence_char) { # cur == gap; pre != gap
-			my $refstart0 = $refstart - 1;
-			my $refend = $cur_refpos;
-			my $alnseg_start0 = $alnseg_start - 1;
-			my $alnseg_end = $aln_pos - 1;
-			print "$refname\t$refstart0\t$refend\t$alnseg_start0\t$alnseg_end\n";
+			$alnseg_id++;
+			$alnseg_start{$alnseg_id} = $alnseg_start;
+			$alnseg_end{$alnseg_id} = $aln_pos - 1;
 		}
 		$prev_base = $_;
 	}
 } else {
 	print STDERR "Sequences of $refname do not exists\n";
 }
+
+####################################################
+# BED file 
+####################################################
+open(BED, "<", $bed) || die;
+while (<BED>) {
+	chomp;
+	my @line = split(/\t/, $_);
+	my ($bed_sname, $bed_start, $bed_end) = @line[0..2];
+	if ($namecheck) {
+		if ($bed_sname ne $refname) {
+			next;
+		}
+	}
+	$bed_start += 1; # 0-based to 1-based
+	my $new_bed_start = $ref2alnpos{$bed_start};
+	my $new_bed_end = $ref2alnpos{$bed_end};
+	
+	my $new_bed_start0 = $new_bed_start - 1;
+	print "$refname\t$new_bed_start0\t$new_bed_end\tUNDERSCORE\t.\t.\torange\n";
+
+	foreach (sort { $a <=> $b } keys %alnseg_start) {
+		my $seg_start = $alnseg_start{$_};
+		my $seg_end = $alnseg_end{$_};
+		# three situations indicating overlapping
+		# in any situtation, sort 4 numbers and take the middle 2 as the interval
+		if (($new_bed_start >= $seg_start and $new_bed_start <= $seg_end) or 
+			($new_bed_end >= $seg_start and $new_bed_end <= $seg_end) or 
+			($new_bed_start <= $seg_start and $new_bed_end >= $seg_end)) {
+			my @four_numbers = ($new_bed_start, $new_bed_end, $seg_start, $seg_end);
+			my @sorted_four = sort { $a <=> $b } @four_numbers;
+			$line[1] = $sorted_four[1] - 1;
+			$line[2] = $sorted_four[2];
+			print join("\t", @line);
+			print "\n";
+		}
+	}
+}
+close BED;
 
