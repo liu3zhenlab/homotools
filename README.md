@@ -17,7 +17,7 @@ The development of **homotools** was motivated by the tedious procedure for extr
 
 ## Requirements and installation
 
-Shell scripts, Perl, and R were combined for the development. Both Perl and R are generally installed. If needed, please refer to [Perl](https://www.perl.org/) and [R](https://www.r-project.org/) for installation guides. [Java](https://www.java.com/en/download/) is required to run [SNPEff](https://pcingola.github.io/SnpEff/se_introduction/). [BLAST+](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/), [MURmer](http://mummer.sourceforge.net/), [BEDtools](https://bedtools.readthedocs.io/en/latest/) are also required.
+Shell scripts, Perl, and R were combined for the development. Both Perl and R are generally installed. If needed, please refer to [Perl](https://www.perl.org/) and [R](https://www.r-project.org/) for installation guides. [Java](https://www.java.com/en/download/) is required to run [SNPEff](https://pcingola.github.io/SnpEff/se_introduction/). [BLAST+](https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/), [MURmer4](http://mummer.sourceforge.net/), [BEDtools](https://bedtools.readthedocs.io/en/latest/) are also required.
 
 To run **homomine**, the multiple sequence aligner [MAFFT](https://mafft.cbrc.jp/alignment/software) is required.
 
