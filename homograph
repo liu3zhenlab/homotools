@@ -16,18 +16,14 @@ use File::Temp;
 use Term::ANSIColor qw(:constants);
 use FindBin;
 use lib "$FindBin::Bin/lib";
-#use genegtfadjust;
-#use maxbed;
 
 my $version = "0.2.6beta";
 
 my $prefix = "hgout";
 my $threads = 1;
-my $msatool = "muscle";
+my $msatool = "clustalo";
 my $cdhit_para = "-g 1 -s 0.8 -c 0.8 -r 0";
 my $title = "Alignmens of multiple sequences";
-
-# $refgap_prop $nonrefgap_prop $maxseg_prop $main_label $genebed
 
 sub prompt {
     print <<EOF;
@@ -35,13 +31,15 @@ sub prompt {
     [Options]
     --fasdir <path>   path to a collection of non-ref fasta files with suffix of .fa, .fas, or .fasta; required
     --ref <file>      fasta file of the reference sequence; required
-    --genebed <file>  bed file of gene structure using coordinates on --ref; optional
-                      chr start(0-based) end(1-based) label height(0.01-0.1) strand(+/-) color(R compatible)
-     --cdhitpara <str> parameters for cd-hit-est ($cdhit_para)
-    --msatool <str>   software tool for multiple sequencee alignment: muscle or mafft ($msatool)
+    --genebed <file>  BED file of gene structure using coordinates on --ref; optional
+                      the BED file must have 7 columns separated by TAB:
+                        1. seqname 2. start(0-based) 3. end(1-based) 4. label
+                        5. height(0.01-0.1) 6. strand(+/-) 7. color(R compatible)
+    --cdhitpara <str> parameters for cd-hit-est ($cdhit_para)
+    --msatool <str>   software tool for multiple sequencee alignment: clustalo, muscle, or mafft ($msatool)
     --threads <num>   number of threads ($threads)
     --prefix <str>    prefix of outputs ($prefix)
-    --title <str>     label to add as the title of haplotype plotting figure ($title)
+    --title <str>     label to add as the title of the output haplotype figure ($title)
     --version         version information
     --help:           help information
 EOF
@@ -105,8 +103,8 @@ if (exists $opts{genebed}) {
 
 if (exists $opts{msatool}) {
 	$msatool = $opts{msatool};
-	if ($msatool ne "muscle" and $msatool ne "mafft") {
-		print STDERR RED, "msatool must be either muscle or mafft\n", RESET;
+	if ($msatool ne "mafft" and $msatool ne "muscle" and $msatool ne "clustalo") {
+		print STDERR RED, "msatool must be either muscle, mafft or clustalo\n", RESET;
 		exit;
 	}
 }
@@ -129,7 +127,6 @@ if (exists $opts{msatool}) {
 # create a directory for outputs
 if (-d $prefix) {
 	print STDERR RED, "Warning: the directory $prefix exists.\n", RESET;
-	#`rm -rf $prefix`;
 } else {
 	`mkdir $prefix`;
 }
@@ -180,19 +177,22 @@ my $ncluster = `grep "^>Cluster" -c $cdhit_prefix.clstr`;
 chomp $ncluster;
 
 ###############################################
-# determine the new ref name
+# determine the original and new ref names
 ###############################################
-my ($refname, $new_refname);
-
+my $refname;
 open(REF, $ref) || die;
 while (<REF>) {
 	if (/^>(.+)/) {
 		$refname = $1;
-	} else {
-		print STDERR RED, "$ref does not have a standard FASTA format\n", RESET;
+		last;
 	}
 }
+if (!defined $refname) {
+		print STDERR RED, "$ref does not have a standard FASTA format\n", RESET;
+		exit;
+}
 
+my $new_refname = $refname;
 open(INFO, $cdhit_out_info) || die;
 while (<INFO>) {
 	chomp;
@@ -207,12 +207,17 @@ close INFO;
 # multiple sequence alignment 
 ###############################################
 &runreport("step 04: run MSA");
-#if ($msatool eq "muscle") {
-#	`muscle -quiet -in $cdhit_out_fasta -out $all_msa_out`;
-#} elsif ($msatool eq "mafft") {
-	# --maxiterate 1000
-#	`mafft --thread $threads --genafpair --quiet $cdhit_out_fasta > $all_msa_out`;
-#}
+if ($msatool eq "muscle") {
+	`muscle -quiet -in $cdhit_out_fasta -out $all_msa_out`;
+	print STDERR GREEN, "muscle is used for MSA.\n", RESET;
+} elsif ($msatool eq "mafft") {
+	 #--maxiterate 1000
+	print STDERR GREEN, "mafft is used for MSA.\n", RESET;
+	`mafft --thread $threads --genafpair --quiet $cdhit_out_fasta > $all_msa_out`;
+} elsif ($msatool eq "clustalo") {
+	print STDERR GREEN, "clustalo is used for MSA.\n", RESET;
+	`clustalo --threads $threads -i $cdhit_out_fasta > $all_msa_out`;
+}
 
 ###############################################
 # blocktyping
@@ -263,4 +268,9 @@ sub runreport {
 	print STDERR MAGENTA, "$dateinfo", RESET;
 	print STDERR "  $injob.\n";
 }
+
+# to-do
+# 1. add msa2variants
+# 2. annotate variants
+# 3. generate a html report
 

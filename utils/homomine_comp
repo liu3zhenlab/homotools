@@ -482,7 +482,7 @@ print HIT "transcript\t$select_transcript\n";
 ###############################################
 # compare via nucmer
 ###############################################
-`nucmer --maxmatch --delta $delta_out --threads $threads $query $target_fas`;
+`nucmer --maxmatch --threads $threads --delta $delta_out $query $target_fas`;
 `echo -e "qstart\tqend\tsstart\tsend\tqmatch\tsmatch\tidentity\tqlen\tslen\tqry\tsubj" > $nucmer_show`;
 `show-coords -HTl $delta_out >> $nucmer_show`;
 
@@ -491,7 +491,7 @@ print HIT "transcript\t$select_transcript\n";
 `show-coords -HTl -I $identity -L $match $delta_out >> $nucmer_filt_show`;
 
 # unique and filtered  alignment
-`nucmer --mum --delta $uniq_delta_out --threads $threads $query $target_fas`;
+`nucmer --mum --threads $threads --delta $uniq_delta_out $query $target_fas`;
 `delta-filter -r -i $identity -l $match $uniq_delta_out > $uniq_delta_filt`;
 `echo -e "qstart\tqend\tsstart\tsend\tqmatch\tsmatch\tidentity\tqlen\tslen\tqry\tsubj" > $nucmer_uniq_filt_show`;
 `show-coords -HTl $uniq_delta_filt >> $nucmer_uniq_filt_show`;

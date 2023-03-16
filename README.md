@@ -22,18 +22,25 @@ Shell scripts, Perl, and R were combined for the development. Both Perl and R ar
 
 To run **homomine**, the multiple sequence aligner [MAFFT](https://mafft.cbrc.jp/alignment/software) is required.
 
-To run **homograph**, [cd-hit](http://weizhong-lab.ucsd.edu/cd-hit/) and [pggb](https://github.com/pangenome/pggb) are required.
+To run **homograph**, [cd-hit](http://weizhong-lab.ucsd.edu/cd-hit/) and one of the following aligners for multiple sequence alignment are required.  
+[Clustal Omega](http://www.clustal.org/omega/)
+[MUSCLE](https://www.drive5.com/muscle/)  
+[MAFFT](https://mafft.cbrc.jp/alignment/software)  
 
-Aternatively, all required packages can be installed through [conda](https://docs.conda.io/en/latest/)
+All required packages can be installed through [conda](https://docs.conda.io/en/latest/)
+```
+git clone https://github.com/liu3zhenlab/homotools.git
+cd homotools
+conda env create -f homotools.yml
+```
 
+Alternatively, separate packages can be installed.
 ```
 conda create -n homotools
 conda activate homotools
-conda install -c anaconda perl
-conda install -c conda-forge openjdk=11.0.2
-conda install -c r r-base
-conda install -c bioconda blast mummer bedtools
-conda install -c bioconda cd-hit mafft
+conda install -c anaconda perl openjdk
+conda install -c r r-base r-knitr r-rmarkdown
+conda install -c bioconda blast mummer4 bedtools cd-hit clustalo muscle mafft
 ```
 
 #### download homotools and run scripts
