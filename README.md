@@ -26,34 +26,32 @@ To run **homograph**, [cd-hit](http://weizhong-lab.ucsd.edu/cd-hit/) and one of 
 [MUSCLE](https://www.drive5.com/muscle/)  
 [MAFFT](https://mafft.cbrc.jp/alignment/software)  
 
-All required packages can be installed through [conda](https://docs.conda.io/en/latest/)
+All required packages can be installed through [conda](https://docs.conda.io/en/latest/):
 ```
 git clone https://github.com/liu3zhenlab/homotools.git
 cd homotools
 conda env create -f homotools.yml
+# test run
+cd data
+sh homocomp_testrun.sh
 ```
+The output directory "out" will be produced with many PDF plots and other outputs. 
 
-Alternatively, separate packages can be installed.
+*Alternatively*, separate packages can be installed separately with Conda.
 ```
 conda create -n homotools
 conda activate homotools
 conda install -c anaconda perl openjdk
 conda install -c r r-base r-knitr r-rmarkdown
 conda install -c bioconda blast mummer4 bedtools cd-hit clustalo muscle mafft
-```
 
-#### download homotools and run scripts
-
-Basically, the installation of homotools is just to copy all homotools files in a directory. Scripts can be directly used afterwards.
-
-```
+# clone homotools to a local directory.
 git clone https://github.com/liu3zhenlab/homotools.git 
 perl ./homotools/homocomp
 # test run
 cd data
 sh homocomp_testrun.sh
 ```
-The output directory "out" will be produced with many PDF plots and other outputs.  
 
 ## geneseq
 
