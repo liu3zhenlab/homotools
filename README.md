@@ -22,7 +22,7 @@ Shell scripts, Perl, and R were combined for the development. Both Perl and R ar
 To run **homomine**, the multiple sequence aligner [MAFFT](https://mafft.cbrc.jp/alignment/software) is required.
 
 To run **homograph**, [cd-hit](http://weizhong-lab.ucsd.edu/cd-hit/) and one of the following aligners for multiple sequence alignment are required.  
-[Clustal Omega](http://www.clustal.org/omega/)
+[Clustal Omega](http://www.clustal.org/omega/)  
 [MUSCLE](https://www.drive5.com/muscle/)  
 [MAFFT](https://mafft.cbrc.jp/alignment/software)  
 
