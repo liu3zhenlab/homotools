@@ -11,6 +11,9 @@ The package is dedicated to structurally compare sequences of homologous genes f
 5. **homostack** visualizes alignments among multiple homologous sequences.
 6. **homograph** visualizes alignments of homologous sequences, determines number of haplotypes, and views the haplotype graph. This module is still under development.
 
+## Flowchart for some modules
+<img src="https://github.com/liu3zhenlab/homotools/blob/main/flowcharts/homotools_flowchart.jpg" alt="msa" width=450 />
+
 ## Motivation
 
 The development of **homotools** was motivated by the tedious procedure for extracting sequences and related information of a gene from a reference genome and homologous genes from other genomes. Unix shell scripts, Perl, and R were combined for the development.
