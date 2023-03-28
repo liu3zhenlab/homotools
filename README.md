@@ -14,6 +14,8 @@ The package is dedicated to structurally compare sequences of homologous genes f
 ## Flowchart for some modules
 <img src="https://github.com/liu3zhenlab/homotools/blob/main/flowcharts/flowchart.png" alt="msa" width=450 />
 
+Usages of these modules can refer to [Wiki](https://github.com/liu3zhenlab/homotools/wiki).
+
 ## Motivation
 
 The development of **homotools** was motivated by the tedious procedure for extracting sequences and related information of a gene from a reference genome and homologous genes from other genomes. Unix shell scripts, Perl, and R were combined for the development.
