@@ -98,10 +98,13 @@ while (<IN>) {
 		$len += length($_);
 	}
 }
+
 # last element:
-$seqhash{$seqname} = uc $seq;
-$lenhash{$seqname} = $len;
-push(@seqlen, $len);
+if (defined $seqname) {
+	$seqhash{$seqname} = uc $seq;
+	$lenhash{$seqname} = $len;
+	push(@seqlen, $len);
+}
 close IN;
 
 ### process aln fasta data
@@ -137,22 +140,23 @@ foreach my $eachseq (@seqnames) {
 my $seqlen = $seqlen[0];
 my %polymorphic_site_ref;
 my %polymorphic_site_alt;
-for (my $pos=1; $pos<=$seqlen; $pos++) {
-	my %cur_bases = %{$all_uniq_base{$pos}};
-	my @cur_bases = keys %cur_bases;
-	if ($#cur_bases > 0) { # polymorphic sites
-		foreach my $eseqname (@seqnames) {
-			if ($eseqname ne $refname) {
-				my $cur_alt_base = $alt_base{$pos}{$eseqname};
-				if ($cur_alt_base ne $ref_base{$pos}) {
-					$polymorphic_site_ref{$eseqname}{$ref_pos{$pos}} .= $ref_base{$pos};
-					$polymorphic_site_alt{$eseqname}{$ref_pos{$pos}} .= $cur_alt_base;
+if ($#seqlen >= 0) {
+	for (my $pos=1; $pos<=$seqlen; $pos++) {
+		my %cur_bases = %{$all_uniq_base{$pos}};
+		my @cur_bases = keys %cur_bases;
+		if ($#cur_bases > 0) { # polymorphic sites
+			foreach my $eseqname (@seqnames) {
+				if ($eseqname ne $refname) {
+					my $cur_alt_base = $alt_base{$pos}{$eseqname};
+					if ($cur_alt_base ne $ref_base{$pos}) {
+						$polymorphic_site_ref{$eseqname}{$ref_pos{$pos}} .= $ref_base{$pos};
+						$polymorphic_site_alt{$eseqname}{$ref_pos{$pos}} .= $cur_alt_base;
+					}
 				}
 			}
 		}
 	}
 }
-
 ###########################
 # genotyping by sample
 ###########################

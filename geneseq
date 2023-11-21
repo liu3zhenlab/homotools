@@ -13,7 +13,7 @@ use genegtfadjust;
 use gffadjust;
 use seqhighlight;
 
-my $version = "0.2.6";
+my $version = "0.2.7";
 
 my $extension_5p = 0;
 my $extension_3p = 0;

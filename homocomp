@@ -19,8 +19,9 @@ use lib "$FindBin::Bin/lib";
 use genegtfadjust;
 use maxbed;
 
-my $version = "0.2.6";
+my $version = "0.2.7";
 # 0.2.3: allow an automatic choice for strand (plus or minus)
+# 0.2.7: limit blastn alignment number to 1000 (-num_alignments 1000)
 
 my $strand = "auto";
 my $prefix = "hpout";
@@ -246,7 +247,7 @@ my ($target_start, $target_end);
 my ($query_name, $query_length, $subj_length);
 
 if (!exists $opts{noblastn}) {
-	`blastn -db $db -query $query -evalue $evalue -num_threads $threads -outfmt "$blastn_fmt" > $blastn_raw`;
+	`blastn -db $db -query $query -num_alignments 1000 -evalue $evalue -num_threads $threads -outfmt "$blastn_fmt" > $blastn_raw`;
 
 	if (-z $blastn_raw) { # empty?
 		&runreport("step 02: no Blastn alignments found");
@@ -272,11 +273,13 @@ if (!exists $opts{noblastn}) {
 	
 	# filter 1: chr, match, identity, query coverage, and evalue
 	if (exists $opts{tchr}) {
-		`awk '\$3==\"$target_chr\" && \$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out \\
-			perl $utilsPath/redundant.aln.rm.pl - > $blastn_filt`;
+		#`awk '\$3==\"$target_chr\" && \$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out | \\
+		#	perl $utilsPath/redundant.aln.rm.pl - > $blastn_filt`;
+		`awk '\$3==\"$target_chr\" && \$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out > $blastn_filt`;
 	} else {
-		`awk '\$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out \\
-			perl $utilsPath/redundant.aln.rm.pl - > $blastn_filt`;
+		#`awk '\$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out | \\
+		#	perl $utilsPath/redundant.aln.rm.pl - > $blastn_filt`;
+		`awk '\$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out > $blastn_filt`;
 	}
 
 	if (-z $blastn_filt) { # empty?

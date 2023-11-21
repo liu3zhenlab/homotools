@@ -257,6 +257,6 @@ homomine_nucmerplot <- function(datafile, qrybed="empty", tgtbed="empty",
   
   # close image output
   if (ispdf) {
-    dev.off()
+    invisible(dev.off())
   }
 }

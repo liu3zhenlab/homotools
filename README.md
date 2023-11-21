@@ -71,4 +71,5 @@ The package homotools is distributed under MIT licence.
 0.2.4: add the module homomine to compare homologs in two genomes and annotate polymorphisms  
 0.2.5: change "delta-filter -1" to "delta-filter -r" in the filter for uniquely mapped alignments  
 0.2.6: add homomine and update homograph
+0.2.7: fix a bug in homomine to properly display SV tables
 

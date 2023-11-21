@@ -145,12 +145,20 @@ sub seqhighlight {
 	# module
 	# extract sequences based on coordinates:
 	sub coordinates2str {
+		my $extracted_seq = "";
 		my ($in_seq, $in_start, $in_end, $flank_character) = @_;
 		# $in_start: 0-based
 		# $in_end: 1-based
+		
+		my $in_seq_len = length($in_seq);
 		my $extract_length = $in_end - $in_start;
-		my $extracted_seq = substr($in_seq, $in_start, $extract_length);
-		$extracted_seq = $flank_character.$extracted_seq.$flank_character;
+		if ($in_end <= $in_seq_len) {
+			$extracted_seq = substr($in_seq, $in_start, $extract_length);
+			$extracted_seq = $flank_character.$extracted_seq.$flank_character;
+		} elsif ($in_start < $in_seq_len) {
+			$in_end = $in_seq_len;
+			$extracted_seq = substr($in_seq, $in_start, $extract_length);
+		}
 		return $extracted_seq;
 	}
 }

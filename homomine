@@ -20,7 +20,7 @@ use lib "$FindBin::Bin/lib";
 use Cwd;
 use Cwd 'abs_path';
 
-my $version = "0.2.6beta";
+my $version = "0.2.7";
 
 my $ext5 = 1000;
 my $ext3 = 500;
@@ -593,8 +593,10 @@ sub is_file_exist {
 	my ($infile, $innote, $is_exit) = @_;
 	if (!-f $infile) {
 		&runreport($innote." ".$infile." does not exist");
-		print STDERR RED, "Exit\n", RESET;
-		exit if $is_exit;
+		if ($is_exit) {
+			print STDERR RED, "Exit\n", RESET;
+			exit;
+		}
 	}
 }
 

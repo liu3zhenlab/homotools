@@ -62,6 +62,7 @@ if (file.exists(tgthit)) {
 ```
 
 ### o Target hit in `r tgtbase`
+*Note*: Below chromosomal interval might not cover the whole gene.  
 ```{r target, echo=F, comment=""}
 if (file.exists(tgthit)) {
   tgt_data <- read.delim(tgthit)
@@ -79,7 +80,7 @@ qt_data_outfile <- paste0(datadir, "/../../", qrygene, "_", tgtbase, ".homo.txt"
 write.table(qt_data, qt_data_outfile, row.names=F, quote=F, sep="\t")
 ```
 
-### o Virsualization of Nucmer alignments
+### o Visualization of Nucmer alignments
 ```{r alncheck, echo=F, comment=""}
 # check alignment
 aln_check <- read.delim(nucmeraln, header=F)
@@ -107,7 +108,7 @@ kable(aln_data)
 ```
 
 ### o Genomic variants with high or moderate impacts
-```{r vcfeff, echo=F, comment="", results = 'asis'}
+```{r vcfeff, echo=F, comment="", results='asis'}
 vcfeff_files <- dir(path=datadir, pattern="eff$", full.names=T)
 if (length(vcfeff_files)>0) {
   for (evcfeff in vcfeff_files) {
@@ -126,7 +127,7 @@ if (length(vcfeff_files)>0) {
 
 ### o Structural variation used `r qrybase` as the reference
 SV was defined if either REF or ALT allele has at least 50 bp and the length difference of two alleles are at least 30 bp.  
-```{r qrySV, echo=F, comment=""}
+```{r qrySV, echo=F, comment="", results='asis'}
 if (file.info(qrysvte)$size > 0) {
   qrysvte_data <- read.delim(qrysvte, header=F)
   if (ncol(qrysvte_data)<=5) {
@@ -136,21 +137,19 @@ if (file.info(qrysvte)$size > 0) {
   }
   
   if (nrow(qrysvte_data)>0) {
-    kable(qrysvte_data, caption="SV and potential TEs")
+    print(kable(qrysvte_data, caption="SV and potential TEs"))
+  	qrysvte_outfile <- paste0(datadir, "/../../", qrygene, "_", tgtbase, ".SV.txt")
+	write.table(qrysvte_data, qrysvte_outfile, row.names=F, quote=F, sep="\t")
   } else {
     cat("No SVs identified\n")
   }
-
-  qrysvte_outfile <- paste0(datadir, "/../../", qrygene, "_", tgtbase, ".SV.txt")
-  # output
-  write.table(qrysvte_data, qrysvte_outfile, row.names=F, quote=F, sep="\t")
 } else {
   cat("No SVs identified\n")
 }
 ```
 
 ### o Structural variation used `r tgtbase` as the reference
-```{r tgtSV, echo=F, comment=""}
+```{r tgtSV, echo=F, comment="", results='asis'}
 if (file.info(tgtsvte)$size > 0) {
   tgtsvte_data <- read.delim(tgtsvte, header=F)
   if (ncol(tgtsvte_data)<=5) {
@@ -160,7 +159,9 @@ if (file.info(tgtsvte)$size > 0) {
   }
   
   if (nrow(tgtsvte_data)>0) {
-    kable(tgtsvte_data, caption="SV and potential TEs")
+	print(kable(tgtsvte_data, caption="SV and potential TEs"))
+	tgtsvte_outfile <- paste0(datadir, "/../../", tgtbase, "_", qrygene, ".SV.txt")
+	write.table(tgtsvte_data, tgtsvte_outfile, row.names=F, quote=F, sep="\t")
   } else {
     cat("No SVs identified\n")
   }
@@ -170,7 +171,7 @@ if (file.info(tgtsvte)$size > 0) {
 ```
 
 ### o All polymorphisms identified
-```{r vcf, echo=F, comment="", results = 'asis'}
+```{r vcf, echo=F, comment="", results='asis'}
 vcffiles <- dir(path=datadir, pattern="vcf$", full.names=T)
 max_seqlen2display <- 50
 variant_found <- 0

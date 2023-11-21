@@ -238,7 +238,7 @@ my ($target_start, $target_end);
 my ($query_name,$query_length, $subj_length);
 
 if (!exists $opts{noblastn}) {
-	`blastn -db $db -query $query -evalue $evalue -num_threads $threads -outfmt "$blastn_fmt" > $blastn_raw`;
+	`blastn -db $db -query $query -num_alignments 100 -evalue $evalue -num_threads $threads -outfmt "$blastn_fmt" > $blastn_raw`;
 
 	if (-z $blastn_raw) { # empty?
 		&runreport("  no Blastn alignments found");

@@ -1,0 +1,15 @@
+/homes/liu3zhen/scripts2/homotools/lib/seqhighlight.pm
+subseq out-of-range error:
+o 2023-03-19 21:33:44
+  Extract target gene information.
+  substr outside of string at /homes/liu3zhen/scripts2/homotools/utils/../lib/seqhighlight.pm line 152, <BED> line 8.
+  Use of uninitialized value $extracted_seq in concatenation (.) or string at /homes/liu3zhen/scripts2/homotools/utils/../lib/seqhighlight.pm line 153, <BED> line 8.
+  substr outside of string at /homes/liu3zhen/scripts2/homotools/utils/../lib/seqhighlight.pm line 152, <BED> line 8.
+  Use of uninitialized value $extracted_seq in concatenation (.) or string at /homes/liu3zhen/scripts2/homotools/utils/../lib/seqhighlight.pm line 153, <BED> line 8.
+  substr outside of string at /homes/liu3zhen/scripts2/homotools/utils/../lib/seqhighlight.pm line 152, <BED> line 8.
+  Use of uninitialized value $extracted_seq in concatenation (.) or string at /homes/liu3zhen/scripts2/homotools/utils/../lib/seqhighlight.pm line 153, <BED> line 8.
+  substr outside of string at /homes/liu3zhen/scripts2/homotools/utils/../lib/seqhighlight.pm line 152, <BED> line 8.
+  Use of uninitialized value $extracted_seq in concatenation (.) or string at /homes/liu3zhen/scripts2/homotools/utils/../lib/seqhighlight.pm line 153, <BED> line 8.
+
+
+
