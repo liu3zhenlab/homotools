@@ -67,9 +67,9 @@ Please report any bugs or suggestion on github or by email to Sanzhen Liu ([liu3
 The package homotools is distributed under MIT licence.
 
 ## versions
-0.2.3: allow an automatic choice for strand (plus or minus) in homocomp  
-0.2.4: add the module homomine to compare homologs in two genomes and annotate polymorphisms  
-0.2.5: change "delta-filter -1" to "delta-filter -r" in the filter for uniquely mapped alignments  
-0.2.6: add homomine and update homograph
-0.2.7: fix a bug in homomine to properly display SV tables
+0.2.3: allowed an automatic choice for strand (plus or minus) in homocomp  
+0.2.4: added the module homomine to compare homologs in two genomes and annotate polymorphisms  
+0.2.5: changed "delta-filter -1" to "delta-filter -r" in the filter for uniquely mapped alignments  
+0.2.6: added homomine and updated homograph
+0.2.7: fixed a bug in homomine to properly display SV tables
 
