@@ -616,14 +616,3 @@ sub strout2file {
 	close $strout_fh;
 }
 
-###############################################
-# module 4: strout2file
-###############################################
-sub strout2file {
-    my ($in_str, $out_filename) = @_;
-    open my $strout_fh, '>', $out_filename || die;
-    printf $strout_fh $in_str;
-    print $strout_fh "\n";
-    close $strout_fh;
-}
-
