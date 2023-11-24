@@ -100,7 +100,7 @@ homomine_nucmerplot(datafile=nucmeraln, qrybed=qrybed, tgtbed=tgtbed,
 homomine_nucmerplot(datafile=nucmeraln, qrybed=qrybed, tgtbed=tgtbed,
                     outpath=figuredir, ispdf=F, imageoutfile=outpdf)
 ```
-Nucmer was used to align sequences of the two sequences. Only uniquely aigned regions are displayed. Orange: repetitive sequences; light blue: untranslated regions; blue: exons.
+Nucmer was used to align sequences of the two sequences. Only uniquely aigned regions are displayed. Orange: repetitive sequences; light blue: untranslated regions; blue: coding regions.
 
 ```{r aln, echo=F, comment=""}
 aln_data <- read.delim(nucmeraln)
