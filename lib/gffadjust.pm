@@ -21,7 +21,8 @@ sub gffadjust {
 	use warnings;
 	
 	my $feature_height = 0.025;
-	my $feature_color = "aquamarine4";
+	#my $feature_color = "aquamarine4";
+	my $feature_color = "orange2";
 
 	my ($outpath, $gff, $start, $seqname) = @_;
 	my %entries;

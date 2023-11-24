@@ -460,7 +460,7 @@ if (defined $target_gtf) {
 	&runreport("  target annotation extracted");
 	
 	# select the bed with the largest total bp lengths to highlighted
-	my $bedfiles = `ls $target_adjust_gtf_prefix*bed`;
+	my $bedfiles = `ls $target_adjust_gtf_prefix*bed 2>/dev/null`;
 	chomp $bedfiles;
 	if ($bedfiles eq "") {
 		$target_add = "empty";

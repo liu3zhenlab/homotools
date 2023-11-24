@@ -432,43 +432,51 @@ my $tgtbed = "empty";
 my $tgt_transcript = "empty";
 my (@hit_header, @hit_content);
 my $tgt_te_bedfile = "";
-if ($tgt_gene ne "") {
-	# target BED
-	$tgtbed = $report_datadir."/".$tgtbase.".label.bed";
-	open(TGTHIT, "<", $tgthit) || die;
-	while(<TGTHIT>) {
-		chomp;
-		my @line = split(/\t/, $_);
-		push(@hit_header, $line[0]);
-		push(@hit_content, $line[1]);
-		if (/transcript\t(\S+)/) {
-			$tgt_transcript = $1;
-		}
-	}
-	close TGTHIT;
 
-	######## if (-d $tgt_data_prefix) ...
-	my $tgt_isoform_bedfile = $tgt_data_prefix."/4.".$tgt_gene.".pos.adjusted.gtf.bed/".$tgt_transcript.".adjusted.bed";
+#if ($tgt_gene ne "") {
+
+# target hit
+open(TGTHIT, "<", $tgthit) || die;
+while(<TGTHIT>) {
+	chomp;
+	my @line = split(/\t/, $_);
+	push(@hit_header, $line[0]);
+	if ($#line>0) {
+		push(@hit_content, $line[1]);
+	} else {
+		push(@hit_content, ".");
+	}
+	if (/transcript\t(\S+)/) {
+		$tgt_transcript = $1;
+	}
+}
+close TGTHIT;
+
+my $tgt_isoform_bedfile;
+if (-d $tgt_data_prefix) {
+	$tgtbed = $report_datadir."/".$tgtbase.".label.bed";
+	$tgt_isoform_bedfile = $tgt_data_prefix."/4.".$tgt_gene.".pos.adjusted.gtf.bed/".$tgt_transcript.".adjusted.bed";
 	$tgt_te_bedfile = $tgt_data_prefix."/5.".$tgt_gene.".others/".$tgt_gene.".TE.adjusted.bed";
 	if (-f $tgt_te_bedfile) {
 		`cat $tgt_isoform_bedfile $tgt_te_bedfile > $tgtbed`;
 	} else {
 		`cp $tgt_isoform_bedfile $tgtbed`;
 	}
-	
-	# format hit data and add to report data
-	open (OUTHIT, ">", $report_tgthit) || die;
-	print OUTHIT join("\t", @hit_header);
-	print OUTHIT "\n";
-	if ($hit_content[3] eq "plus") {
-		$hit_content[3] = "+";
-	} elsif ($hit_content[3] eq "minus") {
-		$hit_content[3] = "-";
-	}
-	print OUTHIT join("\t", @hit_content);
-	print OUTHIT "\n";
-	close OUTHIT;
 }
+	
+# format hit data and add to report data
+open (OUTHIT, ">", $report_tgthit) || die;
+print OUTHIT join("\t", @hit_header);
+print OUTHIT "\n";
+if ($hit_content[3] eq "plus") {
+	$hit_content[3] = "+";
+} elsif ($hit_content[3] eq "minus") {
+	$hit_content[3] = "-";
+}
+print OUTHIT join("\t", @hit_content);
+print OUTHIT "\n";
+close OUTHIT;
+
 
 ### alignment
 my $nucmer_alnfile = $gene2target_homocomp."/".$qrygene."_".$tgtbase.".5f.uniq.filt.delta.txt";

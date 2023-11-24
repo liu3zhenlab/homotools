@@ -56,7 +56,7 @@ if (file.exists(tgthit)) {
   qry_data <- read.delim(qryinput)
   kable(qry_data)
 } else {
-  cat(paste(qryinput, " does not exist\n"))
+  cat(paste(tgthit, " does not exist\n"))
   knitr::knit_exit()
 }
 ```
@@ -100,7 +100,7 @@ homomine_nucmerplot(datafile=nucmeraln, qrybed=qrybed, tgtbed=tgtbed,
 homomine_nucmerplot(datafile=nucmeraln, qrybed=qrybed, tgtbed=tgtbed,
                     outpath=figuredir, ispdf=F, imageoutfile=outpdf)
 ```
-Nucmer was used to align sequences of the two sequences. Only uniquely aigned regions are displayed. Green: repetitive sequences; light blue: untranslated regions; blue: exons.
+Nucmer was used to align sequences of the two sequences. Only uniquely aigned regions are displayed. Orange: repetitive sequences; light blue: untranslated regions; blue: exons.
 
 ```{r aln, echo=F, comment=""}
 aln_data <- read.delim(nucmeraln)
