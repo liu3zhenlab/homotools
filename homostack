@@ -145,7 +145,9 @@ for (my $i=0; $i<$#seq; $i++) {
 	my $delta_out = $nucmer_prefix.$i.".delta";
 	my $nucmer_show = $nucmer_prefix.$i.".txt";
 	`nucmer --mum --delta $delta_out --threads $threads $current_seq $next_seq`;
-	`echo -e "sstart\tsend\tqstart\tqend\tsmatch\tqmatch\tidentity\tslen\tqlen\tsubj\tqry" > $nucmer_show`;
+	#`echo -e "sstart\tsend\tqstart\tqend\tsmatch\tqmatch\tidentity\tslen\tqlen\tsubj\tqry" > $nucmer_show`;
+	my $nucmer_show_header = "sstart\tsend\tqstart\tqend\tsmatch\tqmatch\tidentity\tslen\tqlen\tsubj\tqry";
+	&strout2file($nucmer_show_header, $nucmer_show);
 	`show-coords -HTl -I $identity -L $match $delta_out >> $nucmer_show`;
 	print OUT "$i\t$nucmer_show\t$current_seq\t$current_bed\t$next_seq\t$next_bed\n";
 	# cleanup
@@ -191,12 +193,23 @@ sub runreport {
 }
 
 ###############################################
-## module: convert relative path to absolute path
+## module 3: convert relative path to absolute path
 ###############################################
 sub re2abs {
 	my $inpath = shift;
 	my $outpath = `realpath $inpath`;
 	chomp $outpath;
 	return $outpath;
+}
+
+###############################################
+# module 4: strout2file
+###############################################
+sub strout2file {
+    my ($in_str, $out_filename) = @_;
+    open my $strout_fh, '>', $out_filename || die;
+    printf $strout_fh $in_str;
+    print $strout_fh "\n";
+    close $strout_fh;
 }
 

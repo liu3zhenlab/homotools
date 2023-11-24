@@ -419,7 +419,8 @@ print HIT "strand\t$strand\n";
 my $target_start_0base = $target_start - 1;
 my $strand_char = $strand eq "plus" ? "+" : "-";
 my $target_name = $db_accession."_".$target_chr.":".$target_start."-".$target_end;
-`echo -e "$target_chr\t$target_start_0base\t$target_end\t$target_name\t.\t$strand_char" > $target_bed`;
+my $target_bed_content = "$target_chr\t$target_start_0base\t$target_end\t$target_name\t.\t$strand_char";
+&strout2file($target_bed_content, $target_bed);
 
 if (! exists $opts{ref}) {
 	`blastdbcmd -db $db -entry all > $ref_fas`;
@@ -483,17 +484,21 @@ print HIT "transcript\t$select_transcript\n";
 # compare via nucmer
 ###############################################
 `nucmer --maxmatch --threads $threads --delta $delta_out $query $target_fas`;
-`echo -e "qstart\tqend\tsstart\tsend\tqmatch\tsmatch\tidentity\tqlen\tslen\tqry\tsubj" > $nucmer_show`;
+my $nucmer_show_header = "qstart\tqend\tsstart\tsend\tqmatch\tsmatch\tidentity\tqlen\tslen\tqry\tsubj";
+&strout2file($nucmer_show_header, $nucmer_show);
+#`echo -e "qstart\tqend\tsstart\tsend\tqmatch\tsmatch\tidentity\tqlen\tslen\tqry\tsubj" > $nucmer_show`;
 `show-coords -HTl $delta_out >> $nucmer_show`;
 
 # filtered alignments:
-`echo -e "qstart\tqend\tsstart\tsend\tqmatch\tsmatch\tidentity\tqlen\tslen\tqry\tsubj" > $nucmer_filt_show`;
+#`echo -e "qstart\tqend\tsstart\tsend\tqmatch\tsmatch\tidentity\tqlen\tslen\tqry\tsubj" > $nucmer_filt_show`;
+&strout2file($nucmer_show_header, $nucmer_filt_show);
 `show-coords -HTl -I $identity -L $match $delta_out >> $nucmer_filt_show`;
 
 # unique and filtered  alignment
 `nucmer --mum --threads $threads --delta $uniq_delta_out $query $target_fas`;
 `delta-filter -r -i $identity -l $match $uniq_delta_out > $uniq_delta_filt`;
-`echo -e "qstart\tqend\tsstart\tsend\tqmatch\tsmatch\tidentity\tqlen\tslen\tqry\tsubj" > $nucmer_uniq_filt_show`;
+#`echo -e "qstart\tqend\tsstart\tsend\tqmatch\tsmatch\tidentity\tqlen\tslen\tqry\tsubj" > $nucmer_uniq_filt_show`;
+&strout2file($nucmer_show_header, $nucmer_uniq_filt_show);
 `show-coords -HTl $uniq_delta_filt >> $nucmer_uniq_filt_show`;
 
 &runreport("  Query and target sequences compared");
@@ -559,5 +564,16 @@ sub transcript2gene {
 	}
 	close INGTF;
 	return $outgene;
+}
+
+###############################################
+# module 4: strout2file
+###############################################
+sub strout2file {
+	my ($in_str, $out_filename) = @_;
+	open my $strout_fh, '>', $out_filename || die;
+	printf $strout_fh $in_str;
+	print $strout_fh "\n";
+	close $strout_fh;
 }
 

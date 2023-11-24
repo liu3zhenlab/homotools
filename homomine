@@ -289,20 +289,18 @@ if (-f $tgt_gene_file) {
 	while (<TARGETGENE>) {
 		chomp;
 		my @tline = split(/\t/, $_);
-		if ($#tline>=1) {
-			if ($tline[0] eq "chr") {
-				$hit_target_chr = $tline[1];
-			} elsif ($tline[0] eq "start") {
-				$hit_target_start = $tline[1];
-			} elsif ($tline[0] eq "end") {
-				$hit_target_end = $tline[1];
-			} elsif ($tline[0] eq "strand") {
-				$hit_target_strand = $tline[1];
-			} elsif ($tline[0] eq "gene") {
-				$tgt_gene = $tline[1];
-			} elsif ($tline[0] eq "trancript") {
-				$target_transcript = $tline[1];
-			}
+		if ($tline[0] eq "chr") {
+			$hit_target_chr = $tline[1];
+		} elsif ($tline[0] eq "start") {
+			$hit_target_start = $tline[1];
+		} elsif ($tline[0] eq "end") {
+			$hit_target_end = $tline[1];
+		} elsif ($tline[0] eq "strand") {
+			$hit_target_strand = $tline[1];
+		} elsif ($tline[0] eq "gene") {
+			$tgt_gene = $tline[1];
+		} elsif ($tline[0] eq "trancript") {
+			$target_transcript = $tline[1];
 		}
 	}
 	close TARGETGENE;
@@ -409,12 +407,14 @@ my $html_output_dir = $cwd."/".$prefix;
 my $qry_gene_info_bed = $qry_data_prefix."/3.".$qrygene.".original.bed";
 my $report_qry_input = $report_datadir."/".$qrygene."_".$qrybase.".search.input";
 if (-f $qry_gene_info_bed) {
+	#`echo -e "chr\tstart\tend\tstrand\tgene" >$report_qry_input`;
 	my $report_qry_input_header = "chr\tstart\tend\tstrand\tgene";
 	&strout2file($report_qry_input_header, $report_qry_input);
 	`awk '{ print \$1"\t"\$2+1"\t"\$3"\t"\$6"\t"\$4 }' $qry_gene_info_bed >> $report_qry_input`;
 } else {
 	print STDERR RED, "Warning: $qry_gene_info_bed does not exist.\n", RESET;
 }
+
 # query BED
 my $qrybed = $report_datadir."/".$qrybase.".label.bed";
 my $qry_te_bedfile = $qry_data_prefix."/5.".$qrygene.".others/".$qrygene.".TE.adjusted.bed";
@@ -430,7 +430,7 @@ my $report_tgthit = $report_datadir."/".$qrygene."_to_".$tgtbase.".hit.output";
 my $tgtbed = "empty";
 my $tgt_transcript = "empty";
 my (@hit_header, @hit_content);
-my $tgt_te_bedfile = "";
+my $tgt_te_bedfile;
 if ($tgt_gene ne "") {
 	# target BED
 	$tgtbed = $report_datadir."/".$tgtbase.".label.bed";
@@ -445,8 +445,6 @@ if ($tgt_gene ne "") {
 		}
 	}
 	close TGTHIT;
-
-	######## if (-d $tgt_data_prefix) ...
 	my $tgt_isoform_bedfile = $tgt_data_prefix."/4.".$tgt_gene.".pos.adjusted.gtf.bed/".$tgt_transcript.".adjusted.bed";
 	$tgt_te_bedfile = $tgt_data_prefix."/5.".$tgt_gene.".others/".$tgt_gene.".TE.adjusted.bed";
 	if (-f $tgt_te_bedfile) {
@@ -514,7 +512,7 @@ if (-f $qry_te_bedfile) {
 }
 
 my $tgt_sv_te_bed = $report_datadir."/"."SV_on_".$tgtbase.".bed";
-if (($tgt_te_bedfile ne "") and (-f $tgt_te_bedfile)) {
+if (-f $tgt_te_bedfile) {
 	`perl  $utilsPath/homomine_vcf2svBED \\
 		--vcf $vars_on_tgt | \\
 		sed 's/^[^\t]*/$tgt_gene/g' | \\
@@ -604,14 +602,15 @@ sub is_file_exist {
 		}
 	}
 }
+
 ###############################################
-## module 4: strout2file
-################################################
+# module 4: strout2file
+###############################################
 sub strout2file {
-	my ($in_str, $out_filename) = @_;
-	open my $strout_fh, '>', $out_filename || die;
-	printf $strout_fh $in_str;
-	print $strout_fh "\n";
-	close $strout_fh;
+    my ($in_str, $out_filename) = @_;
+    open my $strout_fh, '>', $out_filename || die;
+    printf $strout_fh $in_str;
+    print $strout_fh "\n";
+    close $strout_fh;
 }
 
