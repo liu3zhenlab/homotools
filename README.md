@@ -72,3 +72,5 @@ The package homotools is distributed under MIT licence.
 0.2.5: changed "delta-filter -1" to "delta-filter -r" in the filter for uniquely mapped alignments  
 0.2.6: added homomine and updated homograph  
 0.2.7: fixed a bug in homomine to properly display SV tables  
+0.2.8: change "echo -e" to Perl code to be more relialbe in different system
+

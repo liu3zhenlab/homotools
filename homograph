@@ -17,7 +17,7 @@ use Term::ANSIColor qw(:constants);
 use FindBin;
 use lib "$FindBin::Bin/lib";
 
-my $version = "0.2.7";
+my $version = "0.2.8";
 
 my $prefix = "hgout";
 my $threads = 1;
