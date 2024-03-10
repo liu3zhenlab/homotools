@@ -244,16 +244,16 @@ close GENEFAS;
 ############################################
 # output sequences with exon/cds highlighted
 ###########################################
-my $all_adjusted_bed = `ls -1 $transcripts_dir/*bed`;
-my @all_adjusted_bed = split("\n", $all_adjusted_bed);
-foreach my $each_abed (@all_adjusted_bed) {
-	my $each_fas_out = $each_abed;
-	$each_fas_out =~ s/.*\///g;
-	$each_fas_out =~ s/\.adjusted\.bed//g;
-	my $transcript_name = $each_fas_out;
-	my $highlighed_fas_out = $others_dir."/".$transcript_name.".highlighted.fasta";
-	seqhighlight::seqhighlight($gene_fas_out, $each_abed, $highlighed_fas_out, $transcript_name);
-}
+#my $all_adjusted_bed = `ls -1 $transcripts_dir/*bed`;
+#my @all_adjusted_bed = split("\n", $all_adjusted_bed);
+#foreach my $each_abed (@all_adjusted_bed) {
+#	my $each_fas_out = $each_abed;
+#	$each_fas_out =~ s/.*\///g;
+#	$each_fas_out =~ s/\.adjusted\.bed//g;
+#	my $transcript_name = $each_fas_out;
+#	my $highlighed_fas_out = $others_dir."/".$transcript_name.".highlighted.fasta";
+#	seqhighlight::seqhighlight($gene_fas_out, $each_abed, $highlighed_fas_out, $transcript_name);
+#}
 #&runreport("  sequences with exon/cds highlights generated");
 
 ###########################################
