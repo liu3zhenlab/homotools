@@ -180,7 +180,7 @@ if (length(vcffiles) > 0) {
     evcf_refname <- gsub(".*vars_on_", "", evcf)
     evcf_refname <- gsub(".vcf$", "", evcf_refname)
     #evcf_data <- read.delim(evcf, comment.char="#", header=F)
-    evcf_data <- try(read.delim(evcf, comment.char="#", header=F), silent=T)
+    evcf_data <- try(read.delim(evcf, comment.char="#", header=F, colClasses="character"), silent=T)
     if (!inherits(evcf_data, 'try-error')) {
       variant_found <- 1
       evcf_data <- evcf_data[, c(1,2,4,5)]

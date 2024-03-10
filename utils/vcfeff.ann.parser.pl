@@ -19,6 +19,7 @@ sub prompt {
     --anncol <num>   : column number for snpEff annotation ($anncol)
     --format <str>   : output format (long or short)
     --comment        : keep VCF comments if specified
+    --singleletter   : convert 3 letter amino acid notation to single letter notation; off by default
     --help           : help information
 EOF
 exit;
@@ -29,6 +30,7 @@ my %opts = ();
 			"anncol=i",
 			"format=s",
 			"comment",
+			"singleletter",
 			"help");
 
 
@@ -43,10 +45,11 @@ if (!exists $opts{vcfeff}) {
 }
 
 if (exists $opts{format}) {
-	if (($opts{format} ne "long") or ($opts{format} ne "short")) {
+	if (($opts{format} ne "long") and ($opts{format} ne "short")) {
 		print STDERR "--format must be either long or short\n";
 		exit;
 	}
+	$format = $opts{format};
 }
 
 ### read data
@@ -80,10 +83,15 @@ while (<IN>) {
 		my $effect = $annot[1];
 		my $impact = $annot[2];
 		my $gene = $annot[4];
+		$gene = defined $gene ? $gene : '.';
 		my $geneid = $annot[5];
+		$geneid = defined $geneid ? $geneid : '.';
 		my $transcript = $annot[6];
+		$transcript = defined $transcript ? $transcript : '.';
 		my $rank = $annot[8];
+		$rank = defined $rank ? $rank : '.';
 		my $dna_notation = $annot[9];
+		$dna_notation = defined $dna_notation ? $dna_notation : '.';
 		$dna_notation =~ s/^c\.//;
 		my $prot_notation = ".";
 		my $cdna_pos = ".";
@@ -93,9 +101,27 @@ while (<IN>) {
 		if ($#annot > 9) {
 			$prot_notation = $annot[10];
 			$prot_notation =~ s/^p\.//;
+			if (exists $opts{singleletter}) {
+				if ($prot_notation =~ /^([a-zA-Z]{3})([0-9]+)([a-zA-Z]{3})/) {
+					my $ori_aa = $1;
+					my $aa_pos = $2;
+					my $new_aa = $3;
+					my $ori_aa_single = convert_to_single_letter($ori_aa);
+					my $new_aa_single = convert_to_single_letter($new_aa);
+					$prot_notation = $ori_aa_single.$aa_pos.$new_aa_single;
+				}
+			}
+		}
+		if ($#annot > 10) {
 			$cdna_pos = $annot[11];
+		}
+		if ($#annot > 11) {
 			$cds_pos = $annot[12];
+		}
+		if ($#annot > 12) {
 			$prot_pos = $annot[13];
+		}
+		if ($#annot > 13) {
 			$distance = $annot[14];
 		}
 		print join("\t", @line[0..3]);
@@ -106,7 +132,28 @@ while (<IN>) {
 		}
 	}
 }
+
 close IN;
+
+sub convert_to_single_letter {
+# to convert three-letter aa notation to single-letter notation
+# developed by ChatGPT and modified by Sanzhen Liu on 12/11/2023
+	my $three_letter_code = shift;
+	# Define the conversion table
+	my %conversion_table = (
+	'ALA' => 'A', 'ARG' => 'R', 'ASN' => 'N', 'ASP' => 'D',
+	'CYS' => 'C', 'GLN' => 'Q', 'GLU' => 'E', 'GLY' => 'G',
+	'HIS' => 'H', 'ILE' => 'I', 'LEU' => 'L', 'LYS' => 'K',
+	'MET' => 'M', 'PHE' => 'F', 'PRO' => 'P', 'SER' => 'S',
+	'THR' => 'T', 'TRP' => 'W', 'TYR' => 'Y', 'VAL' => 'V'
+	);
+	# Convert three letters to uppercase
+	$three_letter_code = uc($three_letter_code);
+	# Perform the conversion
+	my $single_letter_code = $conversion_table{$three_letter_code};
+	return defined $single_letter_code ? $single_letter_code : 'X'; # 'X' for unknown
+}
+
 #"ANN[*].CDNA_POS" (alias POS_CDNA)
 # 87 #"ANN[*].CDNA_LEN" (alias LEN_CDNA)
 # 88 #"ANN[*].CDS_POS" (alias POS_CDS)
