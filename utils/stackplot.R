@@ -169,25 +169,28 @@ yrange <- c(-0.15, num_aln + 0.5)
 highlight_module <- function(bedfile, center, plot=TRUE) {  
   #chr start end label height strand color
   #10	1000	2488	gene	gray60	+	0.015
+  highlight_upper_half_height <- 0
+  if (bedfile != "none") {
 	highlight <- read.delim(bedfile, comment.char="#", stringsAsFactors=F, header=F)
 	if (nrow(highlight)>0) {
 	  highlight_upper_half_height <- max(highlight[, 5]) / 2
 	  if (plot) {
 	    highlight_names <- highlight[!duplicated(highlight[, 4]), 4]
 	    highlight_colors <- highlight[!duplicated(highlight[, 4]), 7]
-      for (i in 1:nrow(highlight)) {
+      	for (i in 1:nrow(highlight)) {
 	      color <- highlight[i, 7]
 	      if (!isColor(color)) {
 		      color <- "grey"
 	  	  }
 	      height <- highlight[i, 5]
-          rect(highlight[i, 2] + 1, center - height / 2,
-	           highlight[i, 3], center + height / 2,
-	           col=color, border=color)
-    }
-	  }
+      	  rect(highlight[i, 2] + 1, center - height / 2,
+	         highlight[i, 3], center + height / 2,
+		     col=color, border=color)
+	    }
+      }
 	}
-	highlight_upper_half_height # return to adjust band positions
+  }
+  highlight_upper_half_height # return to adjust band positions
 }
 ###########################################################
 # canvas

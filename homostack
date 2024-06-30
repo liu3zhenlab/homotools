@@ -137,11 +137,19 @@ my $pdfout = $prefix."/".$prefix.".3.alnstack.pdf";
 ###############################################
 for (my $i=0; $i<$#seq; $i++) {
 	my $current_seq = &re2abs($seq[$i]);
-	my $current_bed = &re2abs($annot[$i]);
-
+	my $current_bed;
+	if ($annot[$i] eq "none") {
+		$current_bed = "none";
+	} else {
+		$current_bed = &re2abs($annot[$i]);
+	}
 	my $next_seq = &re2abs($seq[$i + 1]);
-	my $next_bed = &re2abs($annot[$i + 1]);
-
+	my $next_bed;
+	if ($annot[$i + 1] eq "none") {
+		$next_bed = "none";
+	} else {
+		$next_bed = &re2abs($annot[$i + 1]);
+	}
 	my $delta_out = $nucmer_prefix.$i.".delta";
 	my $nucmer_show = $nucmer_prefix.$i.".txt";
 	`nucmer --mum --delta $delta_out --threads $threads $current_seq $next_seq`;
