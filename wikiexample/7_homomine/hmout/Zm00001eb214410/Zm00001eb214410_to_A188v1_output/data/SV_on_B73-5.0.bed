@@ -1,0 +1,6 @@
+Zm00001eb214410	0	60	del_1	Zm00001eb214410_T001;upstream_gene_variant;MODIFIER	0	2978	helitron
+Zm00001eb214410	0	60	del_1	Zm00001eb214410_T001;upstream_gene_variant;MODIFIER	0	66	repeat_region
+Zm00001eb214410	0	60	del_1	Zm00001eb214410_T001;upstream_gene_variant;MODIFIER	0	63	Gypsy_LTR_retrotransposon
+Zm00001eb214410	0	60	del_1	Zm00001eb214410_T001;upstream_gene_variant;MODIFIER	0	61	long_terminal_repeat
+Zm00001eb214410	0	60	del_1	Zm00001eb214410_T001;upstream_gene_variant;MODIFIER	0	61	LTR_retrotransposon
+Zm00001eb214410	2279	2280	ins_2	Zm00001eb214410_T001;frameshift_variant&stop_gained;HIGH	0	2978	helitron

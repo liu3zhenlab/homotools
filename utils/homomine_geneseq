@@ -259,7 +259,7 @@ close GENEFAS;
 ###########################################
 # TE GFF
 ###########################################
-if (-f $te_gff) {
+if (defined $te_gff and -f $te_gff) {
 	my $gene_te_gff = $others_dir."/".$gene.".TE.gff3";
 	`bedtools intersect -a $te_gff -b $ori_bed_out -nonamecheck > $gene_te_gff`;
 	gffadjust::gffadjust($others_dir, $gene_te_gff, $gene_start, $gene);
@@ -270,21 +270,21 @@ if (-f $te_gff) {
 # other transcript or protein sequences
 ###########################################
 # cds
-if (-f $cds_file) {
+if (defined $cds_file and -f $cds_file) {
 	my $cds_out_file = $others_dir."/".$gene.".cds.fasta";
 	&seqextract($cds_file, $gene, $cds_out_file);
 	#&runreport("  cds sequences extracted");
 }
 
 # cdna
-if (-f $cdna_file) {
+if (defined $cdna_file and -f $cdna_file) {
 	my $cdna_out_file = $others_dir."/".$gene.".cdna.fasta";
 	&seqextract($cdna_file, $gene, $cdna_out_file);
 	#&runreport("  cdna/trancript sequences extracted");
 }
 
 # protein
-if (-f $protein_file) {
+if (defined $protein_file and -f $protein_file) {
 	my $protein_out_file = $others_dir."/".$gene.".protein.fasta";
 	&seqextract($protein_file, $gene, $protein_out_file);
 	#&runreport("  protein sequences extracted");

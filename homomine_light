@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 #======================================================================
-# homomine
+# homomine_light
 # Sanzhen Liu <liu3zhen@ksu.edu>
-# 1/30/2023
+# 7/1/2024
 #
 # The Perl script to find the match region in a target genome
 # and explore differences
@@ -20,7 +20,7 @@ use lib "$FindBin::Bin/lib";
 use Cwd;
 use Cwd 'abs_path';
 
-my $version = "0.3.1";
+my $version = "0.3.0";
 
 my $ext5 = 1000;
 my $ext3 = 500;
@@ -108,27 +108,16 @@ my $target_chr = $opts{tchr} if exists $opts{tchr};
 # fasta, gtf, te, cds.fasta, cdna.fasta, protein.fasta
 my $qry_genome = $qrydir."/".$qrybase.".fasta";
 my $qry_gtf = $qrydir."/".$qrybase.".gtf";
-my $qry_te = $qrydir."/".$qrybase.".TE.gff3";
 &is_file_exist($qry_genome, "Query genome", 1);
 &is_file_exist($qry_gtf, "Query GTF", 1);
-&is_file_exist($qry_te, "Query TE", 0);
-my $qry_te_para = "";
-if (-f $qry_te) {
-	$qry_te_para = "--te $qry_te";
-}
+
 ### check target DBs
 my $tgt_genome = $tgtdir."/".$tgtbase.".fasta";
 my $tgt_blast = $tgt_genome.".nhr";
 my $tgt_gtf = $tgtdir."/".$tgtbase.".gtf";
-my $tgt_te = $tgtdir."/".$tgtbase.".TE.gff3";
 &is_file_exist($tgt_blast, "Target blast+ DB", 1);
 &is_file_exist($tgt_genome, "Target genome", 1);
 &is_file_exist($tgt_gtf, "Target GTF", 1);
-&is_file_exist($tgt_te, "Target TE", 0);
-my $tgt_te_para = "";
-if (-f $tgt_te) {
-	$tgt_te_para = "--te $tgt_te";
-}
 
 if (exists $opts{strand}) {
 	if (($opts{strand} ne "+") and ($opts{strand} ne "-") and ($opts{strand} ne "plus") and ($opts{strand} ne "minus") and ($opts{strand} ne "auto")) {
@@ -222,8 +211,7 @@ my $report_dir = $prefix."/".$qrygene."_to_".$tgtbase."_output";
 	--gene $qrygene \\
 	--gtf $qry_gtf \\
 	--prefix $qry_data_prefix \\
-	--ext5 $ext5 --ext3 $ext3 \\
-	$qry_te_para`;
+	--ext5 $ext5 --ext3 $ext3`;
 
 ###############################################
 # search target genome - homocomp
@@ -309,8 +297,7 @@ if (-f $tgt_gene_file) {
 			--chr $hit_target_chr \\
 			--start $hit_target_start \\
 			--end $hit_target_end \\
-			--prefix $tgt_data_prefix \\
-			$tgt_te_para`;
+			--prefix $tgt_data_prefix`;
 	} else {
 		&runreport("No genes identified in the target genome");
 	}
@@ -411,12 +398,7 @@ if (-f $qry_gene_info_bed) {
 
 # query BED
 my $qrybed = $report_datadir."/".$qrybase.".label.bed";
-my $qry_te_bedfile = $qry_data_prefix."/5.".$qrygene.".others/".$qrygene.".TE.adjusted.bed";
-if (-f $qry_te_bedfile) {
-	`cat $isoform_bedfile $qry_te_bedfile > $qrybed`;
-} else {
-	`cp $isoform_bedfile $qrybed`;
-}
+`cp $isoform_bedfile $qrybed`;
 
 # target hit:
 my $tgthit = $gene2target_homocomp."/hit.output";
@@ -425,8 +407,6 @@ my $tgtbed = "empty";
 my $tgt_transcript = "empty";
 my (@hit_header, @hit_content);
 my $tgt_te_bedfile = "";
-
-#if ($tgt_gene ne "") {
 
 # target hit
 open(TGTHIT, "<", $tgthit) || die;
@@ -449,12 +429,7 @@ my $tgt_isoform_bedfile;
 if (-d $tgt_data_prefix) {
 	$tgtbed = $report_datadir."/".$tgtbase.".label.bed";
 	$tgt_isoform_bedfile = $tgt_data_prefix."/4.".$tgt_gene.".pos.adjusted.gtf.bed/".$tgt_transcript.".adjusted.bed";
-	$tgt_te_bedfile = $tgt_data_prefix."/5.".$tgt_gene.".others/".$tgt_gene.".TE.adjusted.bed";
-	if (-f $tgt_te_bedfile) {
-		`cat $tgt_isoform_bedfile $tgt_te_bedfile > $tgtbed`;
-	} else {
-		`cp $tgt_isoform_bedfile $tgtbed`;
-	}
+	`cp $tgt_isoform_bedfile $tgtbed`;
 }
 	
 # format hit data and add to report data
@@ -499,35 +474,16 @@ foreach my $vcfeff (@eff_files) {
 		--format short > $report_datadir/$report_high_mod_vcfeff`;
 }
 
-### variant and TE
+### variants
 # qry as reference
 my $qry_vcfeff_file = $eff_files[0];
-my $qry_sv_te_bed = $report_datadir."/"."SV_on_".$qrybase.".bed";
-if (-f $qry_te_bedfile) {
-	`perl  $utilsPath/homomine_vcf2svBED \\
-		--anncol 8 --vcf $qry_vcfeff_file | \\
-		bedtools intersect -a - \\
-		-b $qry_te_bedfile -wao | \\
-		cut -f 1-5,7-9 \\
-		> $qry_sv_te_bed`;
-} else {
-	`perl  $utilsPath/homomine_vcf2svBED \\
-		--vcf $qry_vcfeff_file > $qry_sv_te_bed`;
-}
-
-my $tgt_sv_te_bed = $report_datadir."/"."SV_on_".$tgtbase.".bed";
-if (($tgt_te_bedfile ne "") and (-f $tgt_te_bedfile)) {
-	`perl  $utilsPath/homomine_vcf2svBED \\
-		--vcf $vars_on_tgt | \\
-		sed 's/^[^\t]*/$tgt_gene/g' | \\
-		bedtools intersect -a - \\
-		-b $tgt_te_bedfile -wao | \\
-		cut -f 1-5,7-9 \\
-		> $tgt_sv_te_bed`;
-} else {
-	`perl  $utilsPath/homomine_vcf2svBED \\
-		--vcf $vars_on_tgt > $tgt_sv_te_bed`;
-}
+my $qry_sv_bed = $report_datadir."/"."SV_on_".$qrybase.".bed";
+`perl  $utilsPath/homomine_vcf2svBED \\
+	--vcf $qry_vcfeff_file > $qry_sv_bed`;
+# sbj as reference
+my $tgt_sv_bed = $report_datadir."/"."SV_on_".$tgtbase.".bed";
+`perl  $utilsPath/homomine_vcf2svBED \\
+	--vcf $vars_on_tgt > $tgt_sv_bed`;
 
 my $htmlout = $prefix.".homomine.report.html";
 my $tmpRscript = $prefix."/homomine_X_Rmd.render.R";
@@ -547,8 +503,8 @@ print TMPR "    tgtbase=\"$tgtbase\",\n";
 print TMPR "    tgtgene=\"$tgt_gene\",\n";
 print TMPR "    tgtseq=\"$tgt_seqfile\",\n";
 print TMPR "    tgtbed=\"$tgtbed\",\n";
-print TMPR "    qrysvte=\"$qry_sv_te_bed\",\n";
-print TMPR "    tgtsvte=\"$tgt_sv_te_bed\",\n";
+print TMPR "    qrysvte=\"$qry_sv_bed\",\n";
+print TMPR "    tgtsvte=\"$tgt_sv_bed\",\n";
 print TMPR "    tgthit=\"$report_tgthit\",\n";
 print TMPR "    datadir=\"$report_datadir\",\n";
 print TMPR "    figuredir=\"$report_figuredir\",\n";

@@ -1,0 +1,13 @@
+Zm00001eb214410	1000	2288	exon	0.05	+	steelblue1
+Zm00001eb214410	2581	3750	exon	0.05	+	steelblue1
+Zm00001eb214410	1343	2288	CDS	0.05	+	steelblue3
+Zm00001eb214410	2581	3202	CDS	0.05	+	steelblue3
+Zm00001eb214410	0	2978	helitron	0.025	+	orange2
+Zm00001eb214410	0	66	repeat_region	0.025	+	orange2
+Zm00001eb214410	0	63	Gypsy_LTR_retrotransposon	0.025	+	orange2
+Zm00001eb214410	0	61	long_terminal_repeat	0.025	+	orange2
+Zm00001eb214410	0	61	LTR_retrotransposon	0.025	+	orange2
+Zm00001eb214410	61	66	target_site_duplication	0.025	+	orange2
+Zm00001eb214410	456	633	hAT_TIR_transposon	0.025	+	orange2
+Zm00001eb214410	3488	3675	PIF_Harbinger_TIR_transposon	0.025	+	orange2
+Zm00001eb214410	4036	4143	Tc1_Mariner_TIR_transposon	0.025	+	orange2

@@ -1,0 +1,3 @@
+chr	start	end	strand	gene	genome
+chr5	6962020	6966269	-	Zm00001eb214410	B73-5.0
+chr5	7564055	7568623	-	Zm00056a007222	A188v1

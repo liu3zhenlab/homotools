@@ -11,18 +11,19 @@ dependencies:
   - argtable2=2.13=h14c3975_1001
   - bedtools=2.30.0=h468198e_3
   - binutils_impl_linux-64=2.40=hf600244_0
-  - blast=2.5.0=hc0b0e79_3
+  - blast=2.15.0=pl5321h6f7f691_1
   - boost=1.80.0=py311h59ea3da_4
   - boost-cpp=1.80.0=h75c5d50_0
   - bwidget=1.9.14=ha770c72_1
   - bzip2=1.0.8=h7f98852_4
   - c-ares=1.19.0=h5eee18b_0
-  - ca-certificates=2023.01.10=h06a4308_0
+  - ca-certificates=2024.6.2=hbcca054_0
   - cairo=1.16.0=hb05425b_3
   - cd-hit=4.8.1=h5b5514e_7
   - clustalo=1.2.4=h87f3376_5
   - curl=7.88.1=hdc1c0ab_0
   - dbus=1.13.18=hb2f20db_0
+  - entrez-direct=22.1=he881be0_0
   - expat=2.5.0=h27087fc_0
   - font-ttf-dejavu-sans-mono=2.37=hab24e00_0
   - font-ttf-inconsolata=3.000=h77eed37_0
@@ -63,17 +64,19 @@ dependencies:
   - libglib=2.74.1=h606061b_1
   - libgomp=12.2.0=h65d4601_19
   - libiconv=1.17=h166bdaf_0
+  - libidn2=2.3.7=hd590300_0
   - liblapack=3.9.0=16_linux64_openblas
   - libnghttp2=1.52.0=h61bc06f_0
   - libnsl=2.0.0=h7f98852_0
   - libopenblas=0.3.21=pthreads_h78a6416_3
   - libpng=1.6.39=h753d276_0
   - libsanitizer=12.2.0=h46fd767_19
-  - libsqlite=3.40.0=h753d276_0
+  - libsqlite=3.46.0=hde9e2c9_0
   - libssh2=1.10.0=hf14f497_3
   - libstdcxx-devel_linux-64=12.2.0=h3b97bd3_19
   - libstdcxx-ng=12.2.0=h46fd767_19
   - libtiff=4.5.0=h6adf6a1_2
+  - libunistring=0.9.10=h7f98852_0
   - libuuid=2.32.1=h7f98852_1000
   - libwebp-base=1.3.0=h0b41bf4_0
   - libxcb=1.15=h7f8727e_0
@@ -83,14 +86,36 @@ dependencies:
   - make=4.3=hd18ef5c_1
   - mummer4=4.0.0rc1=pl5321h87f3376_4
   - muscle=5.1=h9f5acd7_1
+  - ncbi-vdb=3.1.1=h4ac6f70_0
   - ncurses=6.4=h6a678d5_0
   - numpy=1.24.2=py311h8e6699e_0
   - openjdk=11.0.13=h87a67e3_0
-  - openssl=3.1.0=h0b41bf4_0
+  - openssl=3.3.1=h4ab18f5_1
   - pandoc=2.19.2=h32600fe_2
   - pango=1.50.14=hd33c08f_0
+  - pcre=8.45=h9c3ff4c_0
   - pcre2=10.40=hc3806b6_0
   - perl=5.32.1=2_h7f98852_perl5
+  - perl-archive-tar=2.40=pl5321hdfd78af_0
+  - perl-carp=1.50=pl5321hd8ed1ab_0
+  - perl-common-sense=3.75=pl5321hdfd78af_0
+  - perl-compress-raw-bzip2=2.201=pl5321h87f3376_1
+  - perl-compress-raw-zlib=2.202=pl5321h166bdaf_0
+  - perl-encode=3.21=pl5321hd590300_0
+  - perl-exporter=5.74=pl5321hd8ed1ab_0
+  - perl-exporter-tiny=1.002002=pl5321hdfd78af_0
+  - perl-extutils-makemaker=7.70=pl5321hd8ed1ab_0
+  - perl-io-compress=2.201=pl5321hdbdd923_2
+  - perl-io-zlib=1.14=pl5321hdfd78af_0
+  - perl-json=4.10=pl5321hdfd78af_0
+  - perl-json-xs=2.34=pl5321h4ac6f70_6
+  - perl-list-moreutils=0.430=pl5321hdfd78af_0
+  - perl-list-moreutils-xs=0.430=pl5321h031d066_2
+  - perl-parent=0.241=pl5321hd8ed1ab_0
+  - perl-pathtools=3.75=pl5321hec16e2b_3
+  - perl-scalar-list-utils=1.63=pl5321h166bdaf_0
+  - perl-storable=3.15=pl5321hec16e2b_3
+  - perl-types-serialiser=1.01=pl5321hdfd78af_0
   - pip=23.0.1=pyhd8ed1ab_0
   - pixman=0.40.0=h36c2ea0_0
   - python=3.11.0=he550d4f_1_cpython
@@ -133,6 +158,7 @@ dependencies:
   - tk=8.6.12=h27826a3_0
   - tktable=2.10=hb7b940f_3
   - tzdata=2022g=h191b570_0
+  - wget=1.21.4=hda4d442_0
   - wheel=0.40.0=pyhd8ed1ab_0
   - xorg-kbproto=1.0.7=h7f98852_1002
   - xorg-libice=1.0.10=h7f98852_0
@@ -143,4 +169,4 @@ dependencies:
   - xz=5.2.10=h5eee18b_1
   - zlib=1.2.13=h166bdaf_4
   - zstd=1.5.2=h3eb15da_6
-prefix: /home/liu3zhen/anaconda3/envs/homotools
+prefix: /homes/liu3zhen/anaconda3/envs/homotools
