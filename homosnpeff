@@ -15,7 +15,7 @@ use FindBin;
 use Term::ANSIColor qw(:constants);
 #use lib "$FindBin::Bin/lib";
 
-my $version = "0.2.9";
+my $version = "0.3.0";
 
 my $prefix = "homosnpeff";
 my $identity = 95;

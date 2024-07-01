@@ -17,7 +17,7 @@ use Term::ANSIColor qw(:constants);
 use FindBin;
 use lib "$FindBin::Bin/lib";
 
-my $version = "0.2.9";
+my $version = "0.3.0";
 
 my $prefix = "hgout";
 my $threads = 1;
@@ -151,13 +151,20 @@ my $all_msa_out = $prefix."/".$prefix.".2.msa";
 my $msa_block_out = $prefix."/".$prefix.".2.msa.block";
 
 # blocktyping output
-my $block_out = $prefix.".3.blocktyping";
+my $block_out = $prefix.".3.block.info";
+my $block_list = $prefix.".4.block.list";
 
 # Coordinate-adjusted BED
-my $adjusted_genebed = $prefix."/".$prefix.".4.gene.bed";
+my $adjusted_genebed = $prefix."/".$prefix.".5.gene.bed";
 
 # plotting PDF output
-my $outpdf = $prefix."/".$prefix.".5.msa.pdf";
+my $outpdf = $prefix."/".$prefix.".6.msa.pdf";
+
+# output fasta
+my $outfas = $prefix.".7.block.haplotype.fasta";
+
+# output genotypes of blocks
+my $outblocktype = $prefix.".8.block.genotype.txt";
 
 ###############################################
 # cd-hit haplotypes
@@ -216,21 +223,38 @@ if ($msatool eq "muscle") {
 	`mafft --thread $threads --genafpair --quiet $cdhit_out_fasta > $all_msa_out`;
 } elsif ($msatool eq "clustalo") {
 	print STDERR GREEN, "clustalo is used for MSA.\n", RESET;
-	`clustalo --threads $threads -i $cdhit_out_fasta > $all_msa_out`;
+	#`clustalo --threads $threads -i $cdhit_out_fasta > $all_msa_out`;
 }
 
 ###############################################
 # blocktyping
 ###############################################
 &runreport("step 05: alignment blocktyping");
-`perl $utilsPath/homograph_msa2block --msa $all_msa_out \\
-	--outdir $prefix --outfile $block_out`;
+
+# find blocks
+`perl $utilsPath/homograph_msa2block \\
+	--msa $all_msa_out \\
+	--outdir $prefix \\
+	--outfile $block_out`;
+
+# block list
+`cut $prefix"/"$block_out -f 4,5 | sort -k1n  \\
+	| uniq | awk '{ print \$1 + 1 "\t" \$2 }' \\
+	> $prefix"/"$block_list`;
+
+# genotype blocks in each individuals
+`perl $utilsPath/homograph_msa2blocktype \\
+	--msa $all_msa_out \\
+	--block $prefix"/"$block_list \\
+	--outdir $prefix \\
+	--outfas $outfas \\
+	--outblock $outblocktype`;
 
 ###############################################
 # 
 ###############################################
 if (exists $opts{genebed}) {
-	&runreport("step 06: alignment blocktyping");
+	&runreport("step 06: Reference BED with adjusted positions");
 	`perl $utilsPath/homograph_bed.msa.posadj \\
 		--msa $all_msa_out \\
 		--bed $genebed \\

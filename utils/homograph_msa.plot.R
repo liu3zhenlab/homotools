@@ -99,7 +99,6 @@ isColor <- function(col) {
 #############################################################
 # plotting
 #############################################################
-#d <- read.delim("hgout/hgout.3.blocktyping", header=F)
 d <- read.delim(blocktype, header=F)
 taxa_names_maxlen <- max(nchar(d[, 1]))
 left_margin <- round(taxa_names_maxlen / 5) + 1
@@ -127,9 +126,7 @@ if (highest_polymorphisms >= 1) {
 yheight <- 2 + (ymax - 2) * 0.15
 
 # plot setting
-# par(mar=c(2.2, 0.5, 1, 0.5), mgp=c(1.5,0.1,0))
 pdf(outpdf, width=5, height=yheight)
-
 par(mar=c(left_margin, 3.5, 2.2, 0.5), mgp=c(1, 0.65, 0))
 plot(NULL, NULL, xlim=c(0, xmax), ylim=c(1, ymax),
      frame.plot=F, xlab="", ylab="",
@@ -220,7 +217,7 @@ if (highest_polymorphisms >= 1) {
 }
   
 ######################################################
-# backgrounp of alignment regions (alignment segments)
+# background of alignment regions (alignment segments)
 ######################################################
 row <- 0
 for (etaxon in taxa) {

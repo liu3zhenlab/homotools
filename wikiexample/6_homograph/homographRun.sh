@@ -9,6 +9,6 @@ perl /homes/liu3zhen/scripts2/homotools/homograph \
 	--ref $datadir/0_ref/B73.fasta \
 	--genebed $datadir/0_ref/B73.bed \
 	--fasdir $datadir/1_fas \
-	--threads 8 \
+	--threads 4 \
 	--prefix hgrun
 
