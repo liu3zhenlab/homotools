@@ -145,9 +145,10 @@ if (@block_pos) { # at least one block
 		# genotyping each block
 		my @haplotype = sort { $block_haplotype{$b} <=> $block_haplotype{$a} } keys %block_haplotype;
 		
+		my $order_geno = 0;
 		for (my $j=0; $j<=$#haplotype; $j++) {
 			if ($haplotype[$j] !~ /^-+$/) {
-				my $order_geno = $j + 1;
+				$order_geno++;
 				my $haplotype_name =  $block_name."_".$order_geno;
 				$block_genotype{$haplotype[$j]} = $haplotype_name;
 				print FASTA ">$haplotype_name\n$haplotype[$j]\n";
