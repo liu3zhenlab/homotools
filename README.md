@@ -68,8 +68,8 @@ The package homotools is distributed under MIT licence.
 
 ## versions
 0.3.1: Simplified homomini
-0.3.0: updated homograph outputs
-0.2.9: added the parameter of *colClasses="character"* to utils/homomine_report.Rmd to avoid recognizing nucleotide T as a logic value
+0.3.0: updated homograph outputs  
+0.2.9: added the parameter of *colClasses="character"* to utils/homomine_report.Rmd to avoid recognizing nucleotide T as a logic value  
 0.2.8: changed "echo -e" to Perl code to be more relialbe in different systems  
 0.2.7: fixed a bug in homomine to properly display SV tables  
 0.2.6: added homomine and updated homograph  
