@@ -40,7 +40,6 @@ conda env create -f homotools.yml
 cd data
 sh homocomp_testrun.sh
 ```
-The output directory "out" will be produced with many PDF plots and other outputs. 
 
 *Alternatively*, separate packages can be installed separately with Conda.
 ```
