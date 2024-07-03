@@ -3,6 +3,7 @@ gfashow.R
 backup
 case
 dev
+tmp
 homovg_dev
 homograph_dev
 oldversion
