@@ -1,0 +1,10 @@
+Zm00001eb000510	1000	1865	exon	0.05	+	steelblue1
+Zm00001eb000510	1960	2128	exon	0.05	+	steelblue1
+Zm00001eb000510	2233	2440	exon	0.05	+	steelblue1
+Zm00001eb000510	2509	3349	exon	0.05	+	steelblue1
+Zm00001eb000510	1181	1865	CDS	0.05	+	steelblue3
+Zm00001eb000510	1960	2128	CDS	0.05	+	steelblue3
+Zm00001eb000510	2233	2440	CDS	0.05	+	steelblue3
+Zm00001eb000510	2509	2716	CDS	0.05	+	steelblue3
+Zm00001eb000510	765	906	PIF_Harbinger_TIR_transposon	0.025	+	orange2
+Zm00001eb000510	3407	3516	Tc1_Mariner_TIR_transposon	0.025	+	orange2

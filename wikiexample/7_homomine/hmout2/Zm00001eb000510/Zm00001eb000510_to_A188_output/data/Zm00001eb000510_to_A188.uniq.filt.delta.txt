@@ -1,0 +1,2 @@
+qstart	qend	sstart	send	qmatch	smatch	identity	qlen	slen	qry	subj
+1	3849	1	3860	3849	3860	98.58	3849	3860	Zm00001eb000510	A188_chr1:2366471-2370330(-)
