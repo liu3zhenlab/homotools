@@ -6,10 +6,9 @@ The package is dedicated to structurally compare sequences of homologous genes f
 
 1. **geneseq** can extract gene sequence, gene annotation, other featured data in GTF/GFF and BED format, transcribed sequences, protein sequences, and gene sequences with transcribed sequences highlighted. The positions of gene annotation and other features are adjusted to the coordinates relative to the newly extracted sequences.
 2. **homocomp** implements homologous searching and visualization of the comparison. With a query gene sequence, homologous sequences can be identified in a genome. The homologous gene could be found if a related GTF is supplied. The alignment between two homologous regions are plotted.
-3. **homosnpeff** finds and annotates variants between query and reference sequences.
-4. **homomine** search the best homolog in a targeted genome, identify and annotate polymorphisms, including SNP, INDEL, and structural variation (SV)
-5. **homostack** visualizes alignments among multiple homologous sequences.
-6. **homograph** visualizes alignments of homologous sequences, determines number of haplotypes, and views the haplotype graph. This module is still under development.
+3. **homomine** search the best homolog in a targeted genome, identify and annotate polymorphisms, including SNP, INDEL, and structural variation (SV)
+4. **homostack** visualizes alignments among multiple homologous sequences.
+5. **homograph** visualizes alignments of homologous sequences, determines number of haplotypes, and views the haplotype graph. This module is still under development.
 
 ## Flowchart for modules  
 <img src="https://github.com/liu3zhenlab/homotools/blob/main/flowcharts/homotools_flowchart.png" alt="msa" width=500 />
