@@ -11,7 +11,7 @@ The package is dedicated to structurally compare sequences of homologous genes f
 5. **homograph** visualizes alignments of homologous sequences, determines number of haplotypes, and views the haplotype graph. This module is still under development.
 
 ## Flowchart for modules  
-<img src="https://github.com/liu3zhenlab/homotools/blob/main/flowcharts/homotools_flowchart.png" alt="msa" width=500 />
+<img src="https://github.com/liu3zhenlab/homotools/blob/main/flowcharts/homotools_flowchart_2.png" alt="msa" width=500 />
 
 Usages of these modules can refer to [Wiki](https://github.com/liu3zhenlab/homotools/wiki).
 
