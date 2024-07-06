@@ -20,7 +20,7 @@ use lib "$FindBin::Bin/lib";
 use Cwd;
 use Cwd 'abs_path';
 
-my $version = "0.3.1";
+my $version = "";
 
 my $ext5 = 1000;
 my $ext3 = 500;

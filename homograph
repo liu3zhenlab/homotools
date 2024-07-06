@@ -17,12 +17,12 @@ use Term::ANSIColor qw(:constants);
 use FindBin;
 use lib "$FindBin::Bin/lib";
 
-my $version = "0.3.1";
+my $version = "";
 
 my $prefix = "hgout";
 my $threads = 1;
 my $msatool = "clustalo";
-my $cdhit_para = "-g 1 -s 0.8 -c 0.8 -r 0";
+my $cdhit_para = "-g 1 -s 0.95 -c 0.95 -r 0";
 my $title = "Alignmens of multiple sequences";
 
 sub prompt {
@@ -93,6 +93,7 @@ if ((!exists $opts{fasdir}) or (!exists $opts{ref})) {
 
 $prefix = $opts{prefix} if exists $opts{prefix};
 $threads = $opts{threads} if exists $opts{threads};
+$cdhit_para = $opts{cdhitpara} if exists $opts{cdhitpara};
 my $genebed;
 if (exists $opts{genebed}) {
 	$genebed = $opts{genebed};

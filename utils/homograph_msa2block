@@ -124,7 +124,7 @@ my (%ref_base, @ref_base, %ref_pos, %alnpos2refpos);
 my %pos_taxon_base;
 my %all_uniq_base;
 my ($alnseg_start_pos0, $alnseg_start_pos, $alnseg_end_pos);
-my (%alnseg_start_pos, %alnseg_end_pos, %block_pos);
+my (%alnseg_start_pos, %alnseg_end_pos, %block_pos, %redundant_block_pos);
 
 # ref information
 if (exists $seqhash{$refname}) {
@@ -163,6 +163,9 @@ foreach my $eachseq (@seqnames) {
 				$alnseg_end_pos = $aln_pos;
 				$alnseg_end_pos{$alnseg_end_pos}++;
 				$block_pos{$alnseg_end_pos}++;
+				if (($alnseg_end_pos - $alnseg_start_pos) == 0) {
+					$redundant_block_pos{$alnseg_end_pos}++;
+				}
 				print ALNSEG "$eachseq\t$alnseg_start_pos0\t$alnseg_end_pos\n";
 			}
 		} else { # gap
@@ -170,6 +173,9 @@ foreach my $eachseq (@seqnames) {
 				$alnseg_end_pos = $prev_pos;
 				$alnseg_end_pos{$alnseg_end_pos}++;
 				$block_pos{$alnseg_end_pos}++;
+				if (($alnseg_end_pos - $alnseg_start_pos) == 0) {
+					$redundant_block_pos{$alnseg_end_pos}++;
+				}
 				print ALNSEG "$eachseq\t$alnseg_start_pos0\t$alnseg_end_pos\n";
 			}
 		}
@@ -198,22 +204,25 @@ for (my $pos=1; $pos<=$seqlen; $pos++) {
 }
 
 ##################################
-# block typing
+# block information
 ##################################
-my @block_pos = sort { $a <=> $b } keys %block_pos;
+my @nonredundant_block_pos = keys %block_pos;
+my @redundant_block_pos = keys %redundant_block_pos;
+my @block_pos = sort { $a <=> $b } (@nonredundant_block_pos, @redundant_block_pos);
 
 if (@block_pos) { # multiple blocks
 	# go through each block
 	for (my $i=0; $i<$#block_pos; $i++) { # last position will be missed
 		my %diff_w_consensus_count = ();
 		my $block_start = $block_pos[$i];
-		#if (exists $block_ends_collected{$block_start}) {
-		if (exists $alnseg_end_pos{$block_start}) {
-			$block_start += 1;
-		}
 		my $block_end = $block_pos[$i + 1];
-		if (exists $alnseg_start_pos{$block_end}) {
-			$block_end -= 1;
+		if ($block_start != $block_end) {
+			if (exists $alnseg_end_pos{$block_start}) {
+				$block_start += 1;
+			}
+			if (exists $alnseg_start_pos{$block_end}) {
+				$block_end -= 1;
+			}
 		}
 		my $block_polymorphic_count = 0;
 		# go through each position in a block

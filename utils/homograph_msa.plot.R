@@ -127,7 +127,7 @@ yheight <- 2 + (ymax - 2) * 0.15
 
 # plot setting
 pdf(outpdf, width=5, height=yheight)
-par(mar=c(left_margin, 3.5, 2.2, 0.5), mgp=c(1, 0.65, 0))
+par(mar=c(3.5, left_margin, 2.2, 0.5), mgp=c(1, 0.65, 0))
 plot(NULL, NULL, xlim=c(0, xmax), ylim=c(1, ymax),
      frame.plot=F, xlab="", ylab="",
      xaxt="n", yaxt="n")
@@ -155,19 +155,22 @@ if (is_bed_plot) {
         color <- "grey"
       }
       height <- as.numeric(newbed[i, 5])
-      adjust_height <- height*max(1, ymax/15)
+      adjust_height <- height*max(1, ymax/2)
       max_adjust_height <- max(max_adjust_height, adjust_height)
       rect(newbed[i, 2] + 1, ycenter_2 - adjust_height/2,
            newbed[i, 3], ycenter_2 + adjust_height/2,
            col=color, border=NA)
     }
   }
-  text(newbed_min, ycenter_2, adj=2, labels=seqname, cex=0.6, xpd=T)
-  
+  # label gene name
+  text(newbed_min, ycenter_2, pos=2, labels=seqname, cex=0.6, xpd=T)
+  # text(0, ycenter_2, pos=2, labels=seqname, cex=0.6, xpd=T)
+
+
   ### underscore plotting
   if (is_underscore) {
     for (i in 1:nrow(underscore)) {
-      lines(underscore[i, 2:3], rep(ycenter_2 - max_adjust_height, 2),
+      lines(underscore[i, 2:3], rep(ycenter_2 - max_adjust_height*1.1, 2),
             lwd=1, col=underscore[i, 7], lend=1)
     }
   }
@@ -190,25 +193,25 @@ mtext(title, side=3, line=1)
 ######################################################
 if (highest_polymorphisms >= 1) {
   ypos <- length(taxa) + 1.5
-  log10max <- round(log10(highest_polymorphisms + 1), 0)
-  pscale <- 2 / log10max
-  hlines_val <- seq(0, log10max, by=1)
+  log2max <- round(log2(highest_polymorphisms + 1), 0)
+  pscale <- 2 / log2max
+  hlines_val <- seq(0, log2max, by=ceiling(log2max/2))
   lines_pos = ypos + hlines_val*pscale
   for (i in 1:length(lines_pos)) {
-    lines(c(-xmax/100, xmax), rep(lines_pos[i], 2), lwd=0.5, lty=2, col="gray80")
-    text(-xmax/100, lines_pos[i], adj=2, labels=hlines_val[i], las=1, cex=0.6)
+    lines(c(-xmax/200, xmax), rep(lines_pos[i], 2), lwd=0.5, lty=2, col="gray80")
+    text(-xmax/500, lines_pos[i], pos=2, labels=hlines_val[i], las=1, cex=0.6, xpd=T)
   }
-  #axis(2, at=c(ypos, ypos+log10max*pscale), labels=c(0, log10max),
+  #axis(2, at=c(ypos, ypos+log2max*pscale), labels=c(0, log2max),
   #     tick=T, col="gray50", cex.axis=0.6, las=1)
-  text(-xmax/85, mean(lines_pos), labels="log10", adj=2, las=1, cex=0.7, xpd=T)
-  #hlines_val <- seq(0, log10max, by=1)
+  text(-xmax/60, mean(lines_pos), labels="log2", pos=2, las=1, cex=0.7, xpd=T)
+  #hlines_val <- seq(0, log2max, by=1)
   #abline(h=ypos + hlines_val*pscale, lwd=0.1, lty=2)
   # nums for plotting
   uniqseg <- !duplicated(paste(d[, 4], d[, 5], d[, 6]))
   if (sum(uniqseg)>0) {
     uniqseq_numpoly <- d[uniqseg, c(4,5,6)]
     for (i in 1:nrow(uniqseq_numpoly)) {
-      plot_val <- log10(uniqseq_numpoly[i, 3] + 1)
+      plot_val <- log2(uniqseq_numpoly[i, 3] + 1)
       rect(uniqseq_numpoly[i, 1], ypos,
            uniqseq_numpoly[i, 2], ypos+plot_val*pscale,
            col="palevioletred", border=NA)
