@@ -185,20 +185,20 @@ foreach my $eseqname (@seqnames) {
 				my $cur_alt_base = $epolymorph_alt{$poly_refpos[$i]};
 				$cur_ref .= $cur_ref_base;
 				$cur_alt .= $cur_alt_base;
-				
 				if (exists $epolymorph_ref{$poly_refpos[$i] + 1}) { # neighboring polymorphism exists
 					$previous_ref = $cur_ref;
 					$previous_alt = $cur_alt;
 				} else {
+					# replace - with .
 					$cur_ref =~ s/^\-+$/\./g;
 					$cur_ref =~ s/\-+//g;
 					$cur_alt =~ s/^\-+$/\./g;
 					$cur_alt =~ s/\-+//g;
 					#print "$refname\t$previous_pos\t$cur_ref\t$cur_alt\n";
 					# 20 14370 rs6054257 G A 29 PASS NS=3;DP=14;AF=0.5;DB;H2 GT 0|0 1|1
-						
+					
 					### replace "." with REF base:
-					if ($cur_ref eq ".") { # ins
+					if (($cur_ref eq ".") or (length($cur_ref) < length($cur_alt))) { # ins
 						if ($previous_pos == 0) {
 							$previous_pos = 1;
 							my $count_pos = $refpos2alnpos{1};
@@ -211,11 +211,11 @@ foreach my $eseqname (@seqnames) {
 						}
 					}
 					
-					if ($cur_alt eq ".") { # del
+					if (($cur_alt eq ".") or (length($cur_ref) > length($cur_alt))) { # del
 						my $count_pos = $refpos2alnpos{$previous_pos};
 						if ($previous_pos == 1) {
 							my $cur_ref_len = length($cur_ref);
-							$cur_alt = $ref_base[$count_pos + $cur_ref_len - 2];
+							$cur_alt = $ref_base[$count_pos + $cur_ref_len - 3];
 							$cur_ref .= $cur_alt;
 						} else {
 							$previous_pos -= 1;
@@ -223,7 +223,6 @@ foreach my $eseqname (@seqnames) {
 							$cur_ref = $cur_alt.$cur_ref;
 						}
 					}
-					#print "$refname\t$previous_pos\t$varorder\t$cur_ref\t$cur_alt\t.\t.\t.\tGT\t0\|0\t1\|1\n";
 					print VCF "$refname\t$previous_pos\t$varorder\t$cur_ref\t$cur_alt\t.\t.\t.\tGT\t0\|0\t1\|1\n";
 					$varorder++;
 					$previous_ref = "";
