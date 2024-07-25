@@ -137,7 +137,11 @@ if (file.info(qrysvte)$size > 0) {
   }
   
   if (nrow(qrysvte_data)>0) {
-    print(kable(qrysvte_data, caption="SV and potential TEs"))
+    qrysvte_data$start <- qrysvte_data$start + 1 # adjust to 1-based
+    if (ncol(qrysvte_data)>5) {
+		qrysvte_data$TEstart[qrysvte_data$TEstart >= 0] <- qrysvte_data$TEstart[qrysvte_data$TEstart >= 0] + 1
+	}
+	print(kable(qrysvte_data, caption="SV and potential TEs"))
   	qrysvte_outfile <- paste0(datadir, "/../../", qrygene, "_", tgtbase, ".SV.txt")
 	write.table(qrysvte_data, qrysvte_outfile, row.names=F, quote=F, sep="\t")
   } else {
@@ -159,6 +163,10 @@ if (file.info(tgtsvte)$size > 0) {
   }
   
   if (nrow(tgtsvte_data)>0) {
+	tgtsvte_data$start <- tgtsvte_data$start + 1 # adjust to 1-based
+	if (ncol(tgtsvte_data)>5) {
+		tgtsvte_data$TEstart[tgtsvte_data$TEstart >= 0] <- tgtsvte_data$TEstart[tgtsvte_data$TEstart >= 0] + 1
+	}
 	print(kable(tgtsvte_data, caption="SV and potential TEs"))
 	tgtsvte_outfile <- paste0(datadir, "/../../", tgtbase, "_", qrygene, ".SV.txt")
 	write.table(tgtsvte_data, tgtsvte_outfile, row.names=F, quote=F, sep="\t")
