@@ -1,0 +1,17 @@
+##fileformat=VCFv4.1
+##fileDate=Sat Jul  6 21:01:19 2024 (GMT time)
+##source=simuG.pl
+##INFO=<ID=variant_type,Number=1,Type=String,Description="The type of the introduced genomic variant">
+##INFO=<ID=variant_id,Number=1,Type=String,Description="The id of the introduced genomic variant">
+##INFO=<ID=ref_chr,Number=1,Type=String,Description="The reference genome based chromosome ID of the introduced genomic variant">
+##INFO=<ID=ref_start,Number=1,Type=String,Description="The reference genome based start coordinate of the introduced genomic variant">
+##INFO=<ID=ref_end,Number=1,Type=String,Description="The reference genome based end coordinate of the introduced genomic variant">
+##INFO=<ID=sim_chr,Number=1,Type=String,Description="The simulated genome based chromosome ID of the introduced genomic variant">
+##INFO=<ID=sim_start,Number=1,Type=String,Description="The simulated genome based start coordinate of the introduced genomic variant">
+##INFO=<ID=sim_end,Number=1,Type=String,Description="The simulated genome based end coordinate of the introduced genomic variant">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+Zm00001eb001720	105	.	GGC	G	.	.	variant_type=INDEL;ref_chr=Zm00001eb001720;ref_start=105;ref_end=107;sim_chr=Zm00001eb001720;sim_start=105;sim_end=105
+Zm00001eb001720	984	.	CGCCACGCG	C	.	.	variant_type=INDEL;ref_chr=Zm00001eb001720;ref_start=984;ref_end=992;sim_chr=Zm00001eb001720;sim_start=982;sim_end=982
+Zm00001eb001720	1817	.	CTGTGCATTTGCGT	C	.	.	variant_type=INDEL;ref_chr=Zm00001eb001720;ref_start=1817;ref_end=1830;sim_chr=Zm00001eb001720;sim_start=1807;sim_end=1807
+Zm00001eb001720	1823	.	A	AT	.	.	variant_type=INDEL;ref_chr=Zm00001eb001720;ref_start=1823;ref_end=1823;sim_chr=Zm00001eb001720;sim_start=1800;sim_end=1801
+Zm00001eb001720	2537	.	AA	A	.	.	variant_type=INDEL;ref_chr=Zm00001eb001720;ref_start=2537;ref_end=2538;sim_chr=Zm00001eb001720;sim_start=2515;sim_end=2515

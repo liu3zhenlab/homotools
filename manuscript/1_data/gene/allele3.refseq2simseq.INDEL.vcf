@@ -1,0 +1,14 @@
+##fileformat=VCFv4.1
+##fileDate=Sat Jul  6 21:04:15 2024 (GMT time)
+##source=simuG.pl
+##INFO=<ID=variant_type,Number=1,Type=String,Description="The type of the introduced genomic variant">
+##INFO=<ID=variant_id,Number=1,Type=String,Description="The id of the introduced genomic variant">
+##INFO=<ID=ref_chr,Number=1,Type=String,Description="The reference genome based chromosome ID of the introduced genomic variant">
+##INFO=<ID=ref_start,Number=1,Type=String,Description="The reference genome based start coordinate of the introduced genomic variant">
+##INFO=<ID=ref_end,Number=1,Type=String,Description="The reference genome based end coordinate of the introduced genomic variant">
+##INFO=<ID=sim_chr,Number=1,Type=String,Description="The simulated genome based chromosome ID of the introduced genomic variant">
+##INFO=<ID=sim_start,Number=1,Type=String,Description="The simulated genome based start coordinate of the introduced genomic variant">
+##INFO=<ID=sim_end,Number=1,Type=String,Description="The simulated genome based end coordinate of the introduced genomic variant">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+Zm00001eb001720	1823	.	TT	T	.	.	variant_type=INDEL;ref_chr=Zm00001eb001720;ref_start=1823;ref_end=1824;sim_chr=Zm00001eb001720;sim_start=1823;sim_end=1823
+Zm00001eb001720	3820	.	A	ATG	.	.	variant_type=INDEL;ref_chr=Zm00001eb001720;ref_start=3820;ref_end=3820;sim_chr=Zm00001eb001720;sim_start=3819;sim_end=3821

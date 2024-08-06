@@ -1,0 +1,17 @@
+##fileformat=VCFv4.1
+##fileDate=Sat Jul  6 21:05:51 2024 (GMT time)
+##source=simuG.pl
+##INFO=<ID=variant_type,Number=1,Type=String,Description="The type of the introduced genomic variant">
+##INFO=<ID=variant_id,Number=1,Type=String,Description="The id of the introduced genomic variant">
+##INFO=<ID=ref_chr,Number=1,Type=String,Description="The reference genome based chromosome ID of the introduced genomic variant">
+##INFO=<ID=ref_start,Number=1,Type=String,Description="The reference genome based start coordinate of the introduced genomic variant">
+##INFO=<ID=ref_end,Number=1,Type=String,Description="The reference genome based end coordinate of the introduced genomic variant">
+##INFO=<ID=sim_chr,Number=1,Type=String,Description="The simulated genome based chromosome ID of the introduced genomic variant">
+##INFO=<ID=sim_start,Number=1,Type=String,Description="The simulated genome based start coordinate of the introduced genomic variant">
+##INFO=<ID=sim_end,Number=1,Type=String,Description="The simulated genome based end coordinate of the introduced genomic variant">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+Zm00001eb001720	1620	.	A	G	.	.	variant_type=SNP;ref_chr=Zm00001eb001720;ref_start=1620;ref_end=1620;sim_chr=Zm00001eb001720;sim_start=1620;sim_end=1620
+Zm00001eb001720	1763	.	A	T	.	.	variant_type=SNP;ref_chr=Zm00001eb001720;ref_start=1763;ref_end=1763;sim_chr=Zm00001eb001720;sim_start=1763;sim_end=1763
+Zm00001eb001720	1828	.	A	C	.	.	variant_type=SNP;ref_chr=Zm00001eb001720;ref_start=1828;ref_end=1828;sim_chr=Zm00001eb001720;sim_start=1828;sim_end=1828
+Zm00001eb001720	2174	.	C	A	.	.	variant_type=SNP;ref_chr=Zm00001eb001720;ref_start=2174;ref_end=2174;sim_chr=Zm00001eb001720;sim_start=2174;sim_end=2174
+Zm00001eb001720	3450	.	G	C	.	.	variant_type=SNP;ref_chr=Zm00001eb001720;ref_start=3450;ref_end=3450;sim_chr=Zm00001eb001720;sim_start=3450;sim_end=3450

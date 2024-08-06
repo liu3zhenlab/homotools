@@ -1,0 +1,6 @@
+ref_chr	ref_start	ref_end	ref_strand	ref_allele	sim_chr	sim_start	sim_end	ref_strand	sim_allele	variant_type	variant_id	donor_chr_in_ref	donor_start_in_ref	donor_end_in_ref	donor_strand_in_ref	duplication_type	inserted_copy_number	total_copy_number
+Zm00001eb001720	593	593	+	C	Zm00001eb001720	593	593	+	A	SNP	SNP_5	.	.	.	.	.	.	.
+Zm00001eb001720	1170	1170	+	C	Zm00001eb001720	1170	1170	+	A	SNP	SNP_3	.	.	.	.	.	.	.
+Zm00001eb001720	2445	2445	+	A	Zm00001eb001720	2445	2445	+	C	SNP	SNP_4	.	.	.	.	.	.	.
+Zm00001eb001720	3432	3432	+	G	Zm00001eb001720	3432	3432	+	T	SNP	SNP_1	.	.	.	.	.	.	.
+Zm00001eb001720	4522	4522	+	G	Zm00001eb001720	4522	4522	+	A	SNP	SNP_2	.	.	.	.	.	.	.
