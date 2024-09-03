@@ -1,7 +1,7 @@
 #!/bin/bash
 qrygene=Zm00001eb001720
 datadir=../1_data
-perl ~/scripts2/homotools/homomine \
+perl ../../homomine \
   --qrygene $qrygene \
   --qrydir $datadir/B73 \
   --qrybase B73 \

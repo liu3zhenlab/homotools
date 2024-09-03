@@ -13,7 +13,7 @@ for fas in *fas; do
 done
 popd
 
-perl /homes/liu3zhen/scripts2/homotools/homograph \
+perl ../../homograph \
 	--ref B73/B73.1.Zm00001eb001720.fasta \
 	--genebed B73/B73.4.pos.adjusted.gtf.bed/Zm00001eb001720_T001.adjusted.bed \
 	--fasdir $datadir \

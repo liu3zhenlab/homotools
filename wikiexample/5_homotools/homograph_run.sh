@@ -6,7 +6,7 @@
 conda activate homotools
 datadir=/homes/liu3zhen/scripts2/homotools/wikiexample/1_data/homograph
 
-perl /homes/liu3zhen/scripts2/homotools/homograph \
+perl ../../homograph \
 	--genebed $datadir/0_ref/B73.bed \
 	--msatool clustalo \
 	--threads 16 \

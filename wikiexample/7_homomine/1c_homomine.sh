@@ -8,7 +8,7 @@ fi
 pushd $outdir
 
 datadir=../../1_data/homomine
-perl ~/scripts2/homotools/homomine \
+perl ../../homomine \
   --qrygene $qrygene \
   --qrydir $datadir/B73 \
   --qrybase B73 \
