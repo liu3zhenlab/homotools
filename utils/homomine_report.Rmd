@@ -80,7 +80,7 @@ qt_data_outfile <- paste0(datadir, "/../../", qrygene, "_", tgtbase, ".homo.txt"
 write.table(qt_data, qt_data_outfile, row.names=F, quote=F, sep="\t")
 ```
 
-### o Visualization of Nucmer alignments
+### o Alignments between the two sequences
 ```{r alncheck, echo=F, comment=""}
 # check alignment
 aln_check <- read.delim(nucmeraln, header=F)
@@ -90,7 +90,7 @@ if (nrow(aln_check)==1) {
 }
 ```
 
-```{r comp, echo=F, comment="", fig.height=3, fig.width=6, fig.cap="Fig 1. Nucmer alignment."}
+```{r comp, echo=F, comment="", fig.height=3, fig.width=6, fig.cap="**Fig 1. Visualization of alignments between the two sequences**"}
 source(paste0(scriptdir, "/homomine_nucmerplot.R"))
 # plotting
 outpdf <- paste0(qrygene, "_to_", tgtbase, "nucmer.pdf")
@@ -100,25 +100,33 @@ homomine_nucmerplot(datafile=nucmeraln, qrybed=qrybed, tgtbed=tgtbed,
 homomine_nucmerplot(datafile=nucmeraln, qrybed=qrybed, tgtbed=tgtbed,
                     outpath=figuredir, ispdf=F, imageoutfile=outpdf)
 ```
-Nucmer was used to align sequences of the two sequences. Only uniquely aigned regions are displayed. Orange: repetitive sequences; light blue: untranslated regions; blue: coding regions.
+NUCMER was used to align sequences of the two sequences. Only uniquely aigned regions are displayed. Orange: repetitive sequences; light blue: untranslated exon regions; blue: coding regions.
 
 ```{r aln, echo=F, comment=""}
 aln_data <- read.delim(nucmeraln)
-kable(aln_data)
+kable(aln_data, caption="<strong>Table. Details of sequence alignments</strong>")
 ```
+*Notes*:  
+qstart, qend, qmatch, qlen, qry represent start, end, matched length, total length, and query name in `r qrybase`, respectively.  
+sstart, send, smatch, slen, subj represent start, end, matched length, total length, and target name in `r tgtbase`, respectively.  
+identity: percentage of the alignment identity (%)  
 
 ### o Genomic variants with high or moderate impacts
 ```{r vcfeff, echo=F, comment="", results='asis'}
 vcfeff_files <- dir(path=datadir, pattern="eff$", full.names=T)
 if (length(vcfeff_files)>0) {
+  transcript_count <- 0
   for (evcfeff in vcfeff_files) {
+    transcript_count <- transcript_count + 1
     evcfeff_data <- read.delim(evcfeff, check.names=F)
     if (nrow(evcfeff_data) > 0) {
-      print(kable(evcfeff_data))
+      tablehead <- paste0("<strong>Table. Variants with a high or moderate impact in transcript ", transcript_count, "</strong>")
+	  print(kable(evcfeff_data, , caption=tablehead))
       cat("\n")
     } else {
-      cat("No high or moderate variants identified\n")
-    }
+	  cat("--------------------------------------------------------\n")
+      cat("<strong>No high or moderate variants identified for transcript ", transcript_count, "</strong>\n", sep="")
+	}
   }
 } else {
   cat("No high or moderate variants identified\n")
@@ -141,7 +149,7 @@ if (file.info(qrysvte)$size > 0) {
     if (ncol(qrysvte_data)>5) {
 		qrysvte_data$TEstart[qrysvte_data$TEstart >= 0] <- qrysvte_data$TEstart[qrysvte_data$TEstart >= 0] + 1
 	}
-	print(kable(qrysvte_data, caption="SV and potential TEs"))
+	print(kable(qrysvte_data, caption="**Table. SV and potential TEs**"))
   	qrysvte_outfile <- paste0(datadir, "/../../", qrygene, "_", tgtbase, ".SV.txt")
 	write.table(qrysvte_data, qrysvte_outfile, row.names=F, quote=F, sep="\t")
   } else {
@@ -167,7 +175,7 @@ if (file.info(tgtsvte)$size > 0) {
 	if (ncol(tgtsvte_data)>5) {
 		tgtsvte_data$TEstart[tgtsvte_data$TEstart >= 0] <- tgtsvte_data$TEstart[tgtsvte_data$TEstart >= 0] + 1
 	}
-	print(kable(tgtsvte_data, caption="SV and potential TEs"))
+	print(kable(tgtsvte_data, caption="**Table. SV and potential TEs**"))
 	tgtsvte_outfile <- paste0(datadir, "/../../", tgtbase, "_", qrygene, ".SV.txt")
 	write.table(tgtsvte_data, tgtsvte_outfile, row.names=F, quote=F, sep="\t")
   } else {
@@ -197,7 +205,8 @@ if (length(vcffiles) > 0) {
       alt_long <- nchar(evcf_data$ALT) > max_seqlen2display
       evcf_data$REF[ref_long] <- paste0("long-", nchar(evcf_data$REF)[ref_long], "bp")
       evcf_data$ALT[alt_long] <- paste0("long-", nchar(evcf_data$ALT)[alt_long], "bp")
-      print(kable(evcf_data, caption=paste("Variants on the sequence from", evcf_refname)))
+      print(kable(evcf_data,
+	              caption=paste0("<strong>Table. Variants in the sequence from ", evcf_refname, "</strong>")))
     }
   }
 } else {

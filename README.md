@@ -65,6 +65,7 @@ Please report any bugs or suggestion on github or by email to Sanzhen Liu ([liu3
 The package homotools is distributed under MIT licence.
 
 ## versions
+0.3.4: modified homomine_report.Rmd
 0.3.3: modified homomine_seqpair2var   
 0.3.2: updated homograph  
 0.3.1: simplified homomini  
