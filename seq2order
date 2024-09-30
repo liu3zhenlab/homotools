@@ -1,0 +1,128 @@
+#!/usr/bin/perl -w
+#======================================================================
+# seq2order
+#
+# Author: Sanzhen Liu <liu3zhen@ksu.edu>
+# 9/25/2024
+#
+# to determine a similarity order based on k-mer analyssi
+#======================================================================
+
+use strict;
+use warnings;
+use Getopt::Long;
+use File::Temp;
+use FindBin;
+use Term::ANSIColor qw(:constants);
+use FindBin;
+use lib "$FindBin::Bin/lib";
+
+
+my $prefix = "seqord";
+my $threads = 1;
+
+sub prompt {
+    print <<EOF;
+    Usage: perl $0 --seq <fasta> [options]
+    [Options]
+    --seq <file>     fasta file containing a sequence as the query; required
+                     multiple sequences can be input by using --seq multiple times
+    --threads <int>  number of cpus ($threads)
+    --cleanup        clean up outputs if specified; NO cleanup by default
+    --version        version information
+    --help:          help information.
+EOF
+exit;
+}
+
+###############################################
+# parameters:
+###############################################
+my %opts = ();
+my ($query, $db);
+
+&GetOptions(\%opts, "seq=s@", "cleanup", "version", "help");
+
+if (exists $opts{version}) {
+	print "$version\n";
+	exit;
+}
+
+&prompt if exists $opts{help} or !%opts;
+my (@seq, @annot);
+
+if (!exists $opts{seq}) {
+	print STDERR RED, "--seq is required\n", RESET;
+	&prompt;
+} else {
+	@seq = @{$opts{seq}} if exists $opts{seq};
+}
+
+#$minident = $opts{minident} if exists $opts{minident};
+
+###############################################
+# preparation
+###############################################
+# create a directory for outputs
+if (-d $prefix) {
+	print STDERR RED, "Warning: the directory $prefix exists.\n", RESET;
+} else {
+	`mkdir $prefix`;
+}
+
+# script path:
+my $scriptPath = $FindBin::Bin;
+my $utilsPath = $scriptPath."/utils/";
+
+&runreport("Start to run seq2order");
+
+###############################################
+# check requirments
+###############################################
+&cmd_check("R");
+&cmd_check("realpath");
+
+&runreport("step 01: requirement checked");
+
+###############################################
+# produce k-mer for each sequence set 
+###############################################
+
+###############################################
+# alignment plot
+###############################################
+
+###############################################
+# module 1: check command availability
+###############################################
+sub cmd_check {
+	my $cmd = shift;
+	my $cmdPath=`which $cmd 2>/dev/null`;
+	if (!$cmdPath) {# not founded
+		print STDERR RED, "  $cmd is not found\n", RESET;
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	}
+}
+
+###############################################
+# module 2: report running result
+###############################################
+# funtion to report running return
+sub runreport {
+	my $injob = shift;
+    my $dateinfo = `date +'o %Y-%m-%d %H:%M:%S'`;
+	print STDERR MAGENTA, "$dateinfo", RESET;
+	print STDERR "  $injob.\n";
+}
+
+###############################################
+## module 3: convert relative path to absolute path
+###############################################
+sub re2abs {
+	my $inpath = shift;
+	my $outpath = `realpath $inpath`;
+	chomp $outpath;
+	return $outpath;
+}
+

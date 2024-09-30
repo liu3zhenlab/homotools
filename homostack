@@ -16,18 +16,20 @@ use FindBin;
 use Term::ANSIColor qw(:constants);
 use FindBin;
 use lib "$FindBin::Bin/lib";
-use genegtfadjust;
-use maxbed;
 
 my $version = "0.3.4";
+# 9/25/2024: added --annotskip --alnskip, --ptitle, --seqheight, --cleanup 
+
 
 my $identity = 80; 
 my $match = 100;
 my $prefix = "hsout";
 my $threads = 1;
 my $bandcol = "bisque3";
+my $seqheight = 0.1;
 my $minident = "auto";
 my $maxident = "auto";
+my $title = "ALNStack";
 
 sub prompt {
     print <<EOF;
@@ -35,19 +37,26 @@ sub prompt {
     [Options]
     --seq <file>     fasta file containing a sequence as the query; required
                      multiple sequences can be input by using --seq multiple times
-    --annot <file>   bed file to highlight regions in query; required
-                     [format, 7 columns separated by Tab]:
-                     chr start(0-based) end(1-based) label height(0.01-0.1) strand(+/-) color(R compatible)
-                     [NOTE]: the number --annot needs to match the number of --seq;
-                     they will be paired by their order, i.e., 1st --seq paired with 1st --annot;
-                     if some --annot has no data, input "none".
-    --identity <num> minimal percentage of identity from 0 to 100 ($identity)
-    --match <num>    minimal bp match of an alignment ($match)
+    --annotskip      skip annotation if specified; NO skipping by default
+    --annot <file>   bed file to highlight regions in query; if --annotskip is specified, --annot will be ignored; required otherwise
+                     [format]: 7 columns separated by Tab
+                               chr start(0-based) end(1-based) label height(e.g., 0.1) strand(+/-) color(R compatible)
+                     [NOTE 1]: if no --annotskip, the number --annot needs to match the number of --seq;
+                               they will be paired by their order, i.e., 1st --seq paired with 1st --annot;
+                               if some --annot has no data, input "none".
+                     [NOTE 2]: "height" is the ratio of height of highlighted bars to height of each alignment unit
+                               a highlighted bar fills the specified region if the height equals --\$seqheight value
+    --alnskip        skip alignments if specified; NO skipping by default
+    --identity <int> minimal percentage of identity from 0 to 100 ($identity)
+    --match <int>    minimal bp match of an alignment ($match)
     --prefix <str>   the output directory and the prefix for output files ($prefix)
-    --minident <num> lowest identity for plotting color scaling, 0-100 or auto (auto)
-    --maxident <num> highest identity for plotting color scaling, 0-100 or auto (auto)
-    --threads <num>  number of cpus ($threads)
+    --title <str>    the title of the plot ($title)
+    --minident <int> lowest identity for plotting color scaling, 0-100 or auto (auto)
+    --maxident <int> highest identity for plotting color scaling, 0-100 or auto (auto)
+    --threads <int>  number of cpus ($threads)
+    --seqheight <float> ratio of height of a sequence to height of each alignment unit ($seqheight)
     --bandcol <str>  a valid R color name ($bandcol)
+    --cleanup        clean up outputs if specified; NO cleanup by default
     --version        version information
     --help:          help information.
 EOF
@@ -61,11 +70,13 @@ my %opts = ();
 my ($query, $db);
 
 &GetOptions(\%opts, "seq=s@", "annot=s@",
+                    "alnskip", "title=s",
                     "identity=i", "match=i",
                     "prefix=s", "threads=i",
-                    "bandcol=s",
+					"bandcol=s", "seqheight=f",
                     "minident=i", "maxident=i",
-                    "version", "help");
+                    "annotskip", "cleanup",
+					"version", "help");
 
 if (exists $opts{version}) {
 	print "$version\n";
@@ -75,12 +86,18 @@ if (exists $opts{version}) {
 &prompt if exists $opts{help} or !%opts;
 my (@seq, @annot);
 
-if (!exists $opts{seq} or !exists $opts{annot}) {
-	print STDERR RED, "Both --seq and --annot are required\n", RESET;
+if (!exists $opts{seq} or (!exists $opts{annot} and !exists $opts{annotskip})) {
+	print STDERR RED, "Both --seq and --annot/--annotskip are required\n", RESET;
 	&prompt;
 } else {
 	@seq = @{$opts{seq}} if exists $opts{seq};
-	@annot = @{$opts{annot}} if exists $opts{annot};
+	if (exists $opts{annotskip}) { # annotation will be skipped
+		for (my $i=0; $i<=$#seq; $i++) {
+			push(@annot, "none")
+		}
+	} else {
+		@annot = @{$opts{annot}} if exists $opts{annot};
+	}
 	if ($#seq != $#annot) {
 		print STDERR RED, "Numbers of --seq and --annot MUST be equal\n", RESET;
 		&prompt;
@@ -90,7 +107,9 @@ if (!exists $opts{seq} or !exists $opts{annot}) {
 $identity = $opts{identity} if exists $opts{identity};
 $match = $opts{match} if exists $opts{match};
 $prefix = $opts{prefix} if exists $opts{prefix};
+$title = $opts{title} if exists $opts{title};
 $threads = $opts{threads} if exists $opts{threads};
+$seqheight = $opts{seqheight} if exists $opts{seqheight};
 $bandcol = $opts{bandcol} if exists $opts{bandcol};
 $maxident = $opts{maxident} if exists $opts{maxident};
 $minident = $opts{minident} if exists $opts{minident};
@@ -120,7 +139,7 @@ my $utilsPath = $scriptPath."/utils/";
 &cmd_check("realpath");
 &cmd_check("show-coords");
 
-&runreport("step 01: Requirement checked");
+&runreport("step 01: requirement checked");
 
 ###############################################
 # intermediate output
@@ -152,27 +171,54 @@ for (my $i=0; $i<$#seq; $i++) {
 	}
 	my $delta_out = $nucmer_prefix.$i.".delta";
 	my $nucmer_show = $nucmer_prefix.$i.".txt";
-	`nucmer --mum --delta $delta_out --threads $threads $current_seq $next_seq`;
-	#`echo -e "sstart\tsend\tqstart\tqend\tsmatch\tqmatch\tidentity\tslen\tqlen\tsubj\tqry" > $nucmer_show`;
-	my $nucmer_show_header = "sstart\tsend\tqstart\tqend\tsmatch\tqmatch\tidentity\tslen\tqlen\tsubj\tqry";
-	&strout2file($nucmer_show_header, $nucmer_show);
-	`show-coords -HTl -I $identity -L $match $delta_out >> $nucmer_show`;
+
+	if (! exists $opts{alnskip}) {
+		`nucmer --mum --delta $delta_out --threads $threads $current_seq $next_seq`;
+		my $nucmer_show_header = "sstart\tsend\tqstart\tqend\tsmatch\tqmatch\tidentity\tslen\tqlen\tsubj\tqry";
+		&strout2file($nucmer_show_header, $nucmer_show);
+		`show-coords -HTl -I $identity -L $match $delta_out >> $nucmer_show`;
+		# cleanup
+		`rm $delta_out`;
+	} else {
+		if (!-f $nucmer_show) { 
+			&runreport("step 02: sequences alignments skipped but some alignment files are missing");
+			exit;
+		}
+	}
+	# collect alingment file information
 	print OUT "$i\t$nucmer_show\t$current_seq\t$current_bed\t$next_seq\t$next_bed\n";
-	# cleanup
-	`rm $delta_out`;
 }
 close OUT;
 
-&runreport("step 02: sequences aligned");
+&runreport("step 02: sequence alignments are ready");
 
 ###############################################
 # alignment plot
 ###############################################
 my $stackplot_r = $utilsPath."/stackplot.R";
-
-`Rscript $stackplot_r $data_list $bandcol $minident $maxident $pdfout`;
+my $plot_script =
+"Rscript $stackplot_r \\
+         $data_list \\
+         $bandcol \\
+         $minident \\
+         $maxident \\
+         $seqheight \\
+         \"$title\" \\
+         $pdfout";
+print STDERR "  - Here is the R script for plotting\n";
+print STDERR "    $plot_script\n";
+# run plotting script
+`$plot_script`;
 
 &runreport("step 03: alignment plotted");
+
+###############################################
+# cleanup
+###############################################
+if (exists $opts{cleanup}) {
+	`rm $data_list`;
+	`rm $nucmer_prefix*.txt`;
+}
 
 ###############################################
 # module 1: check command availability
@@ -196,8 +242,6 @@ sub runreport {
     my $dateinfo = `date +'o %Y-%m-%d %H:%M:%S'`;
 	print STDERR MAGENTA, "$dateinfo", RESET;
 	print STDERR "  $injob.\n";
-	#print LOG "$dateinfo  ";    
-	#print LOG "  $injob.\n";
 }
 
 ###############################################

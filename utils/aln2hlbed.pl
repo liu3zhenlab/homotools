@@ -37,8 +37,8 @@ $color="darkolivegreen4" if !defined $color;
 
 if (!defined $height) {
 	$height = 0.05
-} elsif ($height < 0.01 or $height > 0.1) {
-	print STDERR "--height must be from 0.01 to 0.1\n";
+} elsif ($height < 0.01 or $height > 0.3) {
+	print STDERR "--height must be from 0.01 to 0.3\n";
 	exit;
 }
 

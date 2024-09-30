@@ -5,11 +5,11 @@ datalist <- args[1] # nucmer show-coordi output
 band_color <- args[2] # color to be used for plotting
 identity_min <- args[3]
 identity_max <- args[4]
-outpdf <- args[5] # PDF output file
+seq_height <- args[5] # height of each chr
+plot_main <- args[6] # title of the plot
+outpdf <- args[7] # PDF output file
 
-#setwd("/homes/liu3zhen/scripts2/homotools/case/homostack_case/")
-#datalist <- "/homes/liu3zhen/scripts2/homotools/case/homostack_case/hsout/hsout.1.data.list"
-#band_color <- "orange"
+seq_height <- as.numeric(as.character(seq_height))
 
 ###########################################################
 #' module to determine xaxis
@@ -124,6 +124,7 @@ delta2info <- function(deltafile) {
 }
 
 # data list
+cat(datalist, "\n")
 dlist <- read.delim(datalist, stringsAsFactors=F)
 num_aln <- nrow(dlist)
 
@@ -168,16 +169,14 @@ yrange <- c(-0.15, num_aln + 0.5)
 ###########################################################
 highlight_module <- function(bedfile, center, plot=TRUE) {  
   #chr start end label height strand color
-  #10	1000	2488	gene	gray60	+	0.015
+  #10	1000	2488	gene	0.015	+	gray
   highlight_upper_half_height <- 0
   if (bedfile != "none") {
-	highlight <- read.delim(bedfile, comment.char="#", stringsAsFactors=F, header=F)
+	highlight <- read.delim(bedfile, stringsAsFactors=F, header=F)
 	if (nrow(highlight)>0) {
 	  highlight_upper_half_height <- max(highlight[, 5]) / 2
 	  if (plot) {
-	    highlight_names <- highlight[!duplicated(highlight[, 4]), 4]
-	    highlight_colors <- highlight[!duplicated(highlight[, 4]), 7]
-      	for (i in 1:nrow(highlight)) {
+		for (i in 1:nrow(highlight)) {
 	      color <- highlight[i, 7]
 	      if (!isColor(color)) {
 		      color <- "grey"
@@ -186,7 +185,7 @@ highlight_module <- function(bedfile, center, plot=TRUE) {
       	  rect(highlight[i, 2] + 1, center - height / 2,
 	         highlight[i, 3], center + height / 2,
 		     col=color, border=color)
-	    }
+		}
       }
 	}
   }
@@ -196,8 +195,6 @@ highlight_module <- function(bedfile, center, plot=TRUE) {
 # canvas
 ###########################################################
 # pdf
-#pdf(outpdf, width=4.5, height=1.25*num_aln+0.5)
-#pdf(outpdf, width=4.5, height=2*sqrt(num_aln)+0.5)
 pdf(outpdf, width=4.5, height=num_aln/1.5+2)
 
 # plot canvas
@@ -219,9 +216,9 @@ abline(v=xaxis[[4]], col="gray90", lwd=0.5)
 ###########################################################
 block_bottom <- 0
 block_top <- 1
-upper_half_height_default <- 0.005
+upper_half_height_default <- seq_height / 2
 upper_half_height <- upper_half_height_default
-lower_half_height_default <- 0.005
+lower_half_height_default <- seq_height / 2
 lower_half_height <- lower_half_height_default
 bar_band_dist <- 0.005
 
@@ -246,16 +243,18 @@ for (i in 1:num_aln) {
   if (i == 1) {
     rect(0, lower_ycenter - lower_half_height, slen, lower_ycenter + lower_half_height,
       col="gray70", border="gray70")
-    lower_half_height <- highlight_module(bedfile=subj_bed, center=lower_ycenter)
+    lower_half_height_highlight <- highlight_module(bedfile=subj_bed, center=lower_ycenter)
   } else {
-    lower_half_height <- highlight_module(bedfile=subj_bed, center=lower_ycenter, plot=F)
+    lower_half_height_highlight <- highlight_module(bedfile=subj_bed, center=lower_ycenter, plot=F)
   }
-  
+  lower_half_height <- max(lower_half_height_default, lower_half_height_highlight)
+
   # qry and qry highlights
   rect(0, upper_ycenter - upper_half_height, qlen, upper_ycenter + upper_half_height,
        col="gray70", border="gray70")
-  upper_half_height <- highlight_module(bedfile=qry_bed, center=upper_ycenter)
   
+  upper_half_height_hightlight <- highlight_module(bedfile=qry_bed, center=upper_ycenter)
+  upper_half_height <- max(upper_half_height_default, upper_half_height_hightlight)
   # connections
   for (j in 1:nrow(aln)) {
     band_gradient_col <- allcols[which.min(abs(identity20 - aln[j, "identity"]))]
@@ -288,33 +287,38 @@ for (i in 1:num_aln) {
 ###########################################################
 
 ### identity legends
-bar_ypos <- block_bottom + 0.3
+bar_ypos <- block_bottom + 0.4 * max(0.8, log10(num_aln))
 barlen <- xmax / 4
 barstep <- barlen / color_num
-barheight <-  block_top / 20 / log(num_aln)
-text(xmax - barlen/2, bar_ypos, labels = "identity", cex=0.8, pos=1, xpd=T)  ### plot LD name
+barheight <-  block_top / 30 / log(num_aln)
+text(xmax - barlen/2, bar_ypos, labels = "identity", cex=0.8, pos=1, xpd=T)  ### plot lengend name
 
 # lowest identity
 barlabels <- c(identity_min, identity_max)
 barlabels.num <- floor(barlabels * color_num)
 identity_min <- round(identity_min, 1)
-text(xmax-barlen, bar_ypos+0.01, labels=identity_min, cex=0.7, pos=1)  ### plot low identity
+text(xmax-barlen, bar_ypos+0.01, labels=identity_min, cex=0.7, pos=1, xpd=T)  ### plot low identity
 
 # highest identity
 identity_max <- round(identity_max, 1)
 if (identity_max == 100) {
   identity_max <- round(identity_max, 0)
 }
-text(xmax, bar_ypos+0.01, labels=identity_max, cex=0.7, pos=1)  ### plot high identity
+text(xmax, bar_ypos+0.01, labels=identity_max, cex=0.7, pos=1, xpd=T)  ### plot high identity
 
 # color bars for identity legends
 col_barpos <- xmax-barlen
 for (i in 1:color_num) {
   rect(col_barpos, bar_ypos,
      col_barpos + barstep, bar_ypos + barheight,
-     border=NA, col=allcols[i])
+     border=NA, col=allcols[i], xpd=T)
   col_barpos <- col_barpos + barstep
 }
+
+###########################################################
+# title of the plot
+###########################################################
+text(0, bar_ypos, labels=plot_main, cex=1.2, pos=4, xpd=T)
 
 # close
 dev.off() 
