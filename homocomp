@@ -19,7 +19,7 @@ use lib "$FindBin::Bin/lib";
 use genegtfadjust;
 use maxbed;
 
-my $version = "0.3.4";
+my $version = "0.3.5";
 # 0.2.3: allow an automatic choice for strand (plus or minus)
 # 0.2.7: limit blastn alignment number to 1000 (-num_alignments 1000)
 
