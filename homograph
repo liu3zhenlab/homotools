@@ -27,7 +27,7 @@ my $title = "Alignmens of multiple sequences";
 
 sub prompt {
     print <<EOF;
-    Usage: perl $0 --dir <dir_containing_fasta_files> [options]
+    Usage: perl $0 --fasdir <dir_containing_fasta_files> [options]
     [Options]
     --fasdir <path>   path to a collection of non-ref fasta files with suffix of .fa, .fas, or .fasta; required
     --ref <file>      fasta file of the reference sequence; required
