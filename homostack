@@ -111,8 +111,8 @@ $title = $opts{title} if exists $opts{title};
 $threads = $opts{threads} if exists $opts{threads};
 $seqheight = $opts{seqheight} if exists $opts{seqheight};
 $bandcol = $opts{bandcol} if exists $opts{bandcol};
-$maxident = $opts{maxident} if exists $opts{maxident};
 $minident = $opts{minident} if exists $opts{minident};
+$maxident = $opts{maxident} if exists $opts{maxident};
 
 ###############################################
 # preparation

@@ -155,6 +155,9 @@ if (identity_max == "auto") {
 identity_min <- as.numeric(identity_min)
 identity_max <- as.numeric(identity_max)
 
+cat("min=", identity_min)
+cat("max=", identity_max)
+
 # axis of x and y
 xrange <- c(-xmax / 50, xmax + xmax / 50)
 if ((identity_max - identity_min) < 5) {
@@ -257,7 +260,8 @@ for (i in 1:num_aln) {
   upper_half_height <- max(upper_half_height_default, upper_half_height_hightlight)
   # connections
   for (j in 1:nrow(aln)) {
-    band_gradient_col <- allcols[which.min(abs(identity20 - aln[j, "identity"]))]
+    which.color <- which.min(abs(identity20 - aln[j, "identity"]))
+    band_gradient_col <- allcols[which.color]
     bandconnect(topregion=aln[j, 3:4], bottomregion=aln[j, 1:2],
                 topheight=upper_ycenter - upper_half_height - bar_band_dist,
                 bottomheight=lower_ycenter + lower_half_height + bar_band_dist,
@@ -274,8 +278,6 @@ for (i in 1:num_aln) {
     text(x= -xmax / 50, y=lower_ycenter - lower_half_height - bar_band_dist - 0.125,
          labels=ylabels, cex=0.8, xpd=T, pos=4)
   }
-  #text(x= xmax / 2, y=lower_ycenter + lower_half_height,
-	#   labels=transcript, cex=0.8, xpd=T, pos=3)
   block_bottom <- block_bottom + 1
   block_top <- block_top + 1
   lower_half_height <- lower_half_height_default
@@ -285,34 +287,37 @@ for (i in 1:num_aln) {
 ###########################################################
 # legends
 ###########################################################
-
 ### identity legends
-bar_ypos <- block_bottom + 0.4 * max(0.8, log10(num_aln))
+bar_ypos <- block_bottom + 0.35 * min(1, max(0.8, log10(num_aln)))
 barlen <- xmax / 4
 barstep <- barlen / color_num
-barheight <-  block_top / 30 / log(num_aln)
-text(xmax - barlen/2, bar_ypos, labels = "identity", cex=0.8, pos=1, xpd=T)  ### plot lengend name
+colbar_xpos <- xmax - xmax/10 - barlen
+if (num_aln > 1) {
+	barheight <-  block_top / 15 / log(num_aln)
+} else {
+	barheight <-  block_top / 15
+}
+#text(xmax - barlen/2, bar_ypos, labels = "identity", cex=0.8, pos=1, xpd=T)  ### plot lengend name
 
 # lowest identity
 barlabels <- c(identity_min, identity_max)
 barlabels.num <- floor(barlabels * color_num)
 identity_min <- round(identity_min, 1)
-text(xmax-barlen, bar_ypos+0.01, labels=identity_min, cex=0.7, pos=1, xpd=T)  ### plot low identity
+text(colbar_xpos, bar_ypos + barheight/2, labels=identity_min, cex=0.7, pos=2, xpd=T)  ### plot low identity
 
 # highest identity
 identity_max <- round(identity_max, 1)
 if (identity_max == 100) {
   identity_max <- round(identity_max, 0)
 }
-text(xmax, bar_ypos+0.01, labels=identity_max, cex=0.7, pos=1, xpd=T)  ### plot high identity
+text(colbar_xpos + barlen, bar_ypos + barheight/2, labels=identity_max, cex=0.7, pos=4, xpd=T)  ### plot high identity
 
 # color bars for identity legends
-col_barpos <- xmax-barlen
 for (i in 1:color_num) {
-  rect(col_barpos, bar_ypos,
-     col_barpos + barstep, bar_ypos + barheight,
-     border=NA, col=allcols[i], xpd=T)
-  col_barpos <- col_barpos + barstep
+  rect(colbar_xpos, bar_ypos,
+       colbar_xpos + barstep, bar_ypos + barheight,
+       border=NA, col=allcols[i], xpd=T)
+  colbar_xpos <- colbar_xpos + barstep
 }
 
 ###########################################################

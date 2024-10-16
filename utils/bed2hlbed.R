@@ -19,15 +19,15 @@ if (length(args) != 9) {
 }
 
 # Print details for debugging
-cat("<bedfile>, input BED file:", bedfile, "\n")
-cat("<data_col>, data column number in BED:", data_col, "\n")
-cat("<height>, height:", height, "\n")
-cat("<lowcolor>, R compatible color for the lowest value:", lowcolor, "\n")
-cat("<highcolor>,R compatible color for the highest value:", highcolor, "\n")
-cat("<lowvalue>, the input lowest value overriding the lowest value in BED:", lowvalue, "\n")
-cat("<highvalue>, the input lowest value overriding the highest value in BED:", highvalue, "\n")
-cat("<gradient_layer> number for gradient layers:", gradient_layer, "n")
-cat("<outfile>, output BED file:", outfile, "\n")
+#cat("<bedfile>, input BED file:", bedfile, "\n")
+#cat("<data_col>, data column number in BED:", data_col, "\n")
+#cat("<height>, height:", height, "\n")
+#cat("<lowcolor>, R compatible color for the lowest value:", lowcolor, "\n")
+#cat("<highcolor>,R compatible color for the highest value:", highcolor, "\n")
+#cat("<lowvalue>, the input lowest value overriding the lowest value in BED:", lowvalue, "\n")
+#cat("<highvalue>, the input lowest value overriding the highest value in BED:", highvalue, "\n")
+#cat("<gradient_layer> number for gradient layers:", gradient_layer, "n")
+#cat("<outfile>, output BED file:", outfile, "\n")
 
 # convert characters to numbers
 data_col <- as.numeric(data_col)
@@ -90,8 +90,7 @@ for (i in 1:nrow(inbed)) {
 ###########################################################
 # output
 ###########################################################
-outbed <- inbed[, 1:3]
-outbed[, 4] <- "."
+outbed <- inbed[, 1:4]
 outbed[, 5] <- height
 
 if (ncol(inbed)>5) {
