@@ -112,6 +112,7 @@ sstart, send, smatch, slen, subj represent start, end, matched length, total len
 identity: percentage of the alignment identity (%)  
 
 ### o Genomic variants with high or moderate impacts  
+
 ```{r vcfeff, echo=F, comment="", results='asis'}
 vcfeff_files <- dir(path=datadir, pattern="eff$", full.names=T)
 if (length(vcfeff_files)>0) {
