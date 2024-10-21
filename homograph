@@ -22,7 +22,7 @@ my $version = "0.3.5";
 my $prefix = "hgout";
 my $threads = 1;
 my $msatool = "clustalo";
-my $cdhit_para = "-g 1 -s 0.95 -c 0.95 -r 0";
+my $cdhit_para = "-sc 1 -d 0 -g 1 -s 0.95 -c 0.95 -r 0";
 my $title = "Alignmens of multiple sequences";
 
 sub prompt {

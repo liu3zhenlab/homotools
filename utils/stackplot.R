@@ -15,7 +15,8 @@ seq_height <- as.numeric(as.character(seq_height))
 #' module to determine xaxis
 ###########################################################
 smartaxis <- function(maxnum) {
-  numdigits <- nchar(maxnum)
+  maxnum_char <- format(maxnum, nsmall=0, scientific=F) # to make sure that the number is in a non-scientific format
+  numdigits <- nchar(maxnum_char)
   unit <- 10 ^ (numdigits - 1) / (2- round((maxnum / 10 ^ numdigits), 0)) # 1 or 5 e (numdigits - 1)
   subunit <- unit / 5 
   
@@ -155,8 +156,8 @@ if (identity_max == "auto") {
 identity_min <- as.numeric(identity_min)
 identity_max <- as.numeric(identity_max)
 
-cat("min=", identity_min)
-cat("max=", identity_max)
+#cat("min=", identity_min)
+#cat("max=", identity_max)
 
 # axis of x and y
 xrange <- c(-xmax / 50, xmax + xmax / 50)
