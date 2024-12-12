@@ -1,5 +1,8 @@
 # homotools
 
+## Citation for Homotools
+H Liu, O Adesina, R Bika, R Singh, M Jugulam, S Liu. (2024). Homotools: a suite of genomic tools for homologous retrieval and comparison. Genomics Communications, 1:e002. [10.48130/gcomm-0024-0002](https://www.maxapress.com/article/doi/10.48130/gcomm-0024-0002)
+
 ## What can homotools do?
 
 The package is dedicated to structurally compare sequences of homologous genes from different genomes of a species. Briefly, the package has been developed to perform the following analyses. Our [Wiki](https://github.com/liu3zhenlab/homotools/wiki) provides more detailed explanation.

@@ -1,0 +1,437 @@
+#!/usr/bin/perl -w
+#======================================================================
+# homoseq
+#
+# Author: Sanzhen Liu <liu3zhen@ksu.edu>
+# 11/20/2024
+#
+# The Perl script to identify and output the best-hit homologous sequence
+#======================================================================
+
+use strict;
+use warnings;
+use Getopt::Long;
+use File::Temp;
+use FindBin;
+use Term::ANSIColor qw(:constants);
+use FindBin;
+use lib "$FindBin::Bin/lib";
+use genegtfadjust;
+use maxbed;
+
+my $version = "0.3.5";
+
+my $strand = "auto";
+my $prefix = "hpout";
+my $threads = 1;
+my $identity = 80;
+my $match = 100;
+my $coverage = 0;
+my $evalue = '1e-10';
+my $left_ext = 0;
+my $right_ext = 0;
+my $expand = 10;
+sub prompt {
+    print <<EOF;
+    Usage: perl $0 --query <fasta> --db <blast_db> [options]
+    [Options]
+    --query <file>   fasta file containing a sequence as the query; required
+    --db <db_name>   blast database; required
+    --dbacc <str>    accession name of reference database; optional
+    --ref <file>     fasta file of the reference; optional
+                     if not supplied, reference sequences will be extracted from --db
+    --tchr <str>     targeted chromosome or contig; optional
+    --tstart <num>   bp position for the region start; optional
+                     if specified, the value will be used as the left end
+    --tend <num>     bp position for the region end; optional
+                     if specified, the value will be used as the right end
+    --strand <str>   plus (or +), minus (or -), or auto ($strand)
+    --evalue <str>   maximal E-value ($evalue)
+    --identity <num> minimal percentage of identity from 0 to 100 ($identity)
+    --match <num>    minimal bp match of an alignment ($match)
+    --coverage <num> minimal coverage of the query ($coverage)
+    --repeatdust     remove repetitive blastn alignments if specified
+    --lext <num>     extended bp from the left side ($left_ext);
+    --rext <num>     extended bp from the right side ($right_ext);
+    --expand <num>   expand scale relative to the query length ($expand)
+                     e.g., 1kb query, 1kb x $expand extened from both sides will be scanned for the hit range
+    --prefix <str>   the output directory and the prefix for output files ($prefix)
+    --threads <num>  number of cpus ($threads)
+    --noblastn       skip blastn if specified
+    --version        version information
+    --help:          help information.
+EOF
+exit;
+}
+
+###############################################
+# parameters:
+###############################################
+my %opts = ();
+my ($query, $db);
+
+&GetOptions(\%opts, "query=s", "db=s", "ref=s", "dbacc=s",
+                    "strand=s", "tchr=s", "tstart=i", "tend=i",
+                    "identity=i", "match=i", "coverage=i", "evalue=i",
+					"repeatdust", "lext=i", "rext=i", "expand=i",
+                    "prefix=s", "threads=i", "noblastn", "version", "help");
+
+if (exists $opts{version}) {
+	print "$version\n";
+	exit;
+}
+
+&prompt if exists $opts{help} or !%opts;
+if (!exists $opts{query} or !exists $opts{db}) {
+	print STDERR RED, "Both --query and --db are required\n", RESET;
+	&prompt;
+} else {
+	$query = $opts{query};
+	$db = $opts{db};
+}
+
+my $target_chr = $opts{tchr} if exists $opts{tchr};
+
+if ($opts{ref}) {
+	if (!-f $opts{ref}) {
+		&runreport("Reference fasta $opts{ref} does not exist");
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	}
+}
+
+if (exists $opts{strand}) {
+	if (($opts{strand} ne "+") and ($opts{strand} ne "-") and ($opts{strand} ne "plus") and ($opts{strand} ne "minus") and ($opts{strand} ne "auto")) {
+		print STDERR "$opts{strand}\n";
+		print STDERR RED, "--strand must be auto, plus, +, minus, or -\n", RESET;
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	} elsif ($opts{strand} eq "+") {
+		$strand = "plus";
+	} elsif ($opts{strand} eq "-") {
+		$strand = "minus";
+	} else {
+		$strand = $opts{strand};
+	}
+}
+my $db_accession = exists $opts{dbacc} ? $opts{dbacc} : "db";
+$evalue = $opts{evalue} if exists $opts{evalue};
+$identity = $opts{identity} if exists $opts{identity};
+$match = $opts{match} if exists $opts{match};
+$coverage = $opts{coverage} if exists $opts{coverage};
+$left_ext = $opts{left_ext} if exists $opts{left_ext};
+$right_ext = $opts{right_ext} if exists $opts{right_ext};
+$expand = $opts{expand} if exists $opts{expand};
+$prefix = $opts{prefix} if exists $opts{prefix};
+$threads = $opts{threads} if exists $opts{threads};
+
+###############################################
+# preparation
+###############################################
+# create a directory for outputs
+if (-d $prefix) {
+	print STDERR RED, "Warning: the directory $prefix exists.\n", RESET;
+} else {
+	`mkdir $prefix`;
+}
+
+# script path:
+my $scriptPath = $FindBin::Bin;
+my $utilsPath = $scriptPath."/utils/";
+
+
+&runreport("Start to run homocomp");
+
+###############################################
+# check requirments
+###############################################
+&cmd_check("blastn");
+&cmd_check("nucmer");
+&cmd_check("R");
+&cmd_check("bedtools");
+&cmd_check("awk");
+&cmd_check("blastdbcmd");
+&cmd_check("delta-filter");
+&cmd_check("show-coords");
+
+&runreport("step 01: Requirement checked");
+
+###############################################
+# intermediate output
+###############################################
+# blastn output
+my $blastn_raw = $prefix."/".$prefix.".1.raw.blastn";
+my $blastn_out = $prefix."/".$prefix.".1.blastn";
+
+# filtered blastn output
+my $blastn_filt = $prefix."/".$prefix.".2.blastn.filt";
+
+# bed file for sequence extraction
+my $target_bed = $prefix."/".$prefix.".3.target.bed";
+
+# reference fasta file
+my $ref_fas;
+if (exists $opts{ref}) {
+	$ref_fas = $opts{ref};
+} else {
+	$ref_fas = $prefix."/".$prefix.".0.ref.fas";
+}
+
+# target fasta file
+my $target_fas = $prefix."/".$prefix.".4.target.fas";
+
+###############################################
+# blastn
+###############################################
+my $blastn_fmt = "6 qseqid qlen sseqid slen length pident qcovs qstart qend sstart send evalue bitscore";
+
+my ($target_start, $target_end);
+my ($query_name, $query_length, $subj_length);
+
+if (!exists $opts{noblastn}) {
+	`blastn -db $db -query $query -num_alignments 1000 -evalue $evalue -num_threads $threads -outfmt "$blastn_fmt" > $blastn_raw`;
+
+	if (-z $blastn_raw) { # empty?
+		&runreport("step 02: no Blastn alignments found");
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	} else {
+		my $blastn_nrow=`wc -l $blastn_raw`;
+		chomp $blastn_nrow;
+		&runreport("step 02: Blastn alignments generated");
+		print STDERR "  - hits: $blastn_nrow\n";
+	}
+
+	# dust repeated alignments
+	if (exists $opts{repeatdust}) {
+		`perl $utilsPath/repeatdust.pl $blastn_raw > $blastn_out`;
+		my $blastn2_nrow=`wc -l $blastn_out`;
+		chomp $blastn2_nrow;
+		&runreport("step 02b: Repetitive blastn alignments removed");
+		print STDERR "  - hits: $blastn2_nrow\n";
+	} else {
+		`mv $blastn_raw $blastn_out`;
+	}
+	
+	# filter 1: chr, match, identity, query coverage, and evalue
+	if (exists $opts{tchr}) {
+		#`awk '\$3==\"$target_chr\" && \$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out | \\
+		#	perl $utilsPath/redundant.aln.rm.pl - > $blastn_filt`;
+		`awk '\$3==\"$target_chr\" && \$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out > $blastn_filt`;
+	} else {
+		#`awk '\$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out | \\
+		#	perl $utilsPath/redundant.aln.rm.pl - > $blastn_filt`;
+		`awk '\$5>=$match && \$6>=$identity && \$7>=$coverage && \$12<=$evalue' $blastn_out > $blastn_filt`;
+	}
+
+	if (-z $blastn_filt) { # empty?
+		&runreport("step 03: no alignments left after filtering");
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	} else {
+		my $blastn_filt_nrow=`wc -l $blastn_filt`;
+		chomp $blastn_filt_nrow;
+		&runreport("step 03: Alignments filtered");
+		print STDERR "  - hits: $blastn_filt_nrow\n";
+	}
+
+###############################################
+# determine the hit range
+###############################################
+# to determine hit chr by using the alignment with the highest bitscore
+# and determine the range of hit:
+# scan $expand x query_lengh and find the start and end
+# extend start with $left_ext and extend end with $right_ext
+#"qseqid qlen sseqid slen length(5) pident qcovs qstart qend sstart (10) send evalue bitscore"
+	my $highest_bitscore = 0;
+	my ($hit_start, $hit_end);
+	my ($best_hit_chr, $best_hit_pos);
+	my $strand_auto = 0;
+	my $auto_strand_value;
+	open(IN, "<", $blastn_filt) || die;
+	while(<IN>) {
+		chomp;
+		my @line = split("\t", $_);
+		my $bitscore = $line[12];
+		if ($bitscore > $highest_bitscore) {
+			$query_name = $line[0];
+			$query_length = $line[1];
+			$subj_length = $line[3];
+			$best_hit_chr = $line[2];
+			$best_hit_pos = int(($line[9] + $line[10]) / 2);
+			$highest_bitscore = $bitscore;
+			if ($strand eq "auto") {
+				if ($line[9] > $line[10]) {
+					$auto_strand_value = "minus";
+				} else {
+					$auto_strand_value = "plus";
+				}
+				$strand_auto = 1;
+			}
+		}
+	}
+	close IN;
+	
+	if ($strand_auto) {
+		$strand = $auto_strand_value;
+		print STDERR "  - $strand is the automatically strand choice\n";
+	}
+
+	&runreport("step 04: best hit is $best_hit_chr:$best_hit_pos");
+
+	my $scan_start = $best_hit_pos - $query_length * $expand;
+	my $scan_end = $best_hit_pos + $query_length * $expand;
+	$hit_start = $best_hit_pos;
+	$hit_end = $best_hit_pos;
+	open(IN, "<", $blastn_filt) || die;
+	while(<IN>) {
+		chomp;
+		my @line = split("\t", $_);
+		my  $aln_start = $line[9];
+		my $aln_end = $line[10];
+		if ($line[9] > $line[10]) {
+			$aln_start = $line[10];
+			$aln_end = $line[9];
+		}
+		if (($line[2] eq $best_hit_chr) & ($aln_start >= $scan_start) & ($aln_end <= $scan_end)) {
+			if ($aln_start < $hit_start) {
+				$hit_start = $aln_start;
+			}
+
+			if ($aln_end > $hit_end) {
+				$hit_end = $aln_end;
+			}
+		}
+	}
+	close IN;
+	&runreport("step 05: hit range is $best_hit_chr:$hit_start-$hit_end");
+	print STDERR "  - hit searching is within $scan_start:$scan_end\n";
+	$target_chr = $best_hit_chr;
+
+###############################################
+# determine target range to be extracted
+###############################################
+	my $hit_ext_start = $hit_start - $left_ext;
+	my $hit_ext_end = $hit_end + $right_ext;
+	&runreport("step 06: target range");
+	# target start
+	if (exists $opts{tstart}) {
+		$target_start = $opts{tstart};
+		print STDERR "  - Predefined target start: $target_start.\n";
+		print STDERR "    Discard the computed start: $hit_ext_start.\n";
+	} else {
+		$target_start = $hit_ext_start;
+	}
+
+	# target end
+	if (exists $opts{tend}) {
+		$target_end = $opts{tend};
+		print STDERR "  - Predefined target end: $target_end.\n";
+		print STDERR "    Discard the computed end: $hit_ext_end.\n";
+	} else {
+		$target_end = $hit_ext_end;
+	}
+
+	# check if target is beyond the range
+	if ($target_start < 1) {
+		$target_start = 1;
+		print STDERR "  - target start is <1, set to 1\n";
+	}
+
+	if ($target_end > $subj_length) {
+		$target_end = $subj_length;
+		print STDERR "  - target end is longer than subj length, set to subj length\n";
+	}
+} else {
+	$query_name = `grep "^>" $query | sed 's/^>//g' | sed 's/ .*//g'`;
+	chomp $query_name;
+	
+	# check if chr, start, end have been specified
+	if (!exists $opts{tchr} or !exists $opts{tstart} or !exists $opts{tend}) {
+		print STDERR RED, "Because --noblastn was specified, these parameters must be provided:\n", RESET;
+		print STDERR RED, "  --tchr --tstart --tend\n", RESET;
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	}
+	
+	$target_start = $opts{tstart};
+	$target_end = $opts{tend};
+	&runreport("step 02-06 of blastn and others skipped");
+}
+
+# final target and bedtools sequence extraction
+print STDERR "  - BLAST target range is: $target_chr:$target_start-$target_end.\n";
+
+###############################################
+# extract target sequence 
+###############################################
+my $target_start_0base = $target_start - 1;
+my $strand_char = $strand eq "plus" ? "+" : "-";
+my $target_name = $db_accession."_".$target_chr.":".$target_start."-".$target_end;
+my $target_bed_content = "$target_chr\t$target_start_0base\t$target_end\t$target_name\t.\t$strand_char";
+&strout2file($target_bed_content, $target_bed);
+
+if (! exists $opts{ref}) {
+	`blastdbcmd -db $db -entry all > $ref_fas`;
+}
+
+if (-f $target_fas) {
+	`rm $target_fas`;
+}
+
+# getfasta
+`bedtools getfasta -fi $ref_fas -bed $target_bed -fo $target_fas -s -nameOnly`;
+my $target_final_name = $target_name."(".$strand_char.")";
+
+if (-f $target_fas) {
+	&runreport("step 07: target sequence extracted");
+} else {
+	print STDERR RED, "target sequence failed to extract\n", RESET;
+	print STDERR RED, "Exit\n", RESET;
+	exit;
+}
+
+###############################################
+# cleanup
+###############################################
+if (! exists $opts{ref}) {
+	`rm $ref_fas*`;
+}
+
+###############################################
+# module 1: check command availability
+###############################################
+sub cmd_check {
+	my $cmd = shift;
+	my $cmdPath=`which $cmd 2>/dev/null`;
+	if (!$cmdPath) {# not founded
+		print STDERR RED, "  $cmd is not found\n", RESET;
+		print STDERR RED, "Exit\n", RESET;
+		exit;
+	}
+}
+
+###############################################
+# module 2: report running result
+###############################################
+# funtion to report running return
+sub runreport {
+	my $injob = shift;
+    my $dateinfo = `date +'o %Y-%m-%d %H:%M:%S'`;
+	print STDERR MAGENTA, "$dateinfo", RESET;
+	print STDERR "  $injob.\n";
+	#print LOG "$dateinfo  ";    
+	#print LOG "  $injob.\n";
+}
+
+###############################################
+# strout2file
+###############################################
+sub strout2file {
+	my ($in_str, $out_filename) = @_;
+	open my $strout_fh, '>', $out_filename || die;
+	printf $strout_fh $in_str;
+	print $strout_fh "\n";
+	close $strout_fh;
+}
+
